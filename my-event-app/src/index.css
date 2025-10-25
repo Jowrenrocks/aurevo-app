@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* === Custom Theme Variables === */
+:root {
+  --elevate-1: rgba(0,0,0, .03);
+  --elevate-2: rgba(0,0,0, .08);
+  --background: 0 0% 98%;
+  --foreground: 25 15% 20%;
+  --border: 0 0% 88%;
+  --card: 35 40% 92%;
+  --card-foreground: 25 15% 20%;
+  --card-border: 35 15% 82%;
+  --sidebar: 35 35% 90%;
+  --sidebar-foreground: 25 15% 20%;
+  --sidebar-border: 35 15% 80%;
+  --sidebar-primary: 45 95% 45%;
+  --sidebar-primary-foreground: 45 10% 98%;
+  --sidebar-accent: 35 30% 85%;
+  --sidebar-accent-foreground: 25 20% 25%;
+  --sidebar-ring: 45 95% 45%;
+  --popover: 35 35% 88%;
+  --popover-foreground: 25 15% 20%;
+  --popover-border: 35 15% 78%;
+  --primary: 45 95% 45%;
+  --primary-foreground: 45 10% 98%;
+  --secondary: 35 25% 82%;
+  --secondary-foreground: 25 20% 25%;
+  --muted: 35 20% 86%;
+  --muted-foreground: 25 10% 40%;
+  --accent: 35 25% 84%;
+  --accent-foreground: 25 20% 25%;
+  --destructive: 0 75% 42%;
+  --destructive-foreground: 0 10% 98%;
+  --input: 0 0% 70%;
+  --ring: 45 95% 45%;
+  --chart-1: 45 95% 45%;
+  --chart-2: 180 85% 45%;
+  --chart-3: 25 60% 50%;
+  --chart-4: 200 70% 48%;
+  --chart-5: 35 75% 55%;
+  --font-sans: Inter, Montserrat, sans-serif;
+  --font-serif: Playfair Display, Cormorant Garamond, Georgia, serif;
+  --font-mono: Menlo, monospace;
+  --radius: .5rem;
+  --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.06);
+  --shadow-sm: 0px 1px 3px 0px hsl(0 0% 0% / 0.08), 0px 1px 2px -1px hsl(0 0% 0% / 0.08);
+  --shadow: 0px 2px 4px -1px hsl(0 0% 0% / 0.08), 0px 4px 6px -1px hsl(0 0% 0% / 0.08);
+  --shadow-md: 0px 4px 6px -1px hsl(0 0% 0% / 0.08), 0px 2px 4px -2px hsl(0 0% 0% / 0.08);
+  --shadow-lg: 0px 10px 15px -3px hsl(0 0% 0% / 0.08), 0px 4px 6px -4px hsl(0 0% 0% / 0.08);
+  --shadow-xl: 0px 20px 25px -5px hsl(0 0% 0% / 0.08), 0px 8px 10px -6px hsl(0 0% 0% / 0.08);
+  --shadow-2xl: 0px 25px 50px -12px hsl(0 0% 0% / 0.15);
+}
+
+/* === Base styles (you already had this part) === */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
