@@ -12,7 +12,7 @@ import SignupPage from "./components/SignupPage";
 import DashboardLayout from "./components/DashboardLayout";
 import DashboardPage from "./pages/DashboardPage";
 import CreateEventPage from "./pages/CreateEventPage";
-import EventsListPage from "./pages/EventsListPage";
+import EventManagementPage from "./pages/EventManagementPage";
 import ProfilePage from "./pages/ProfilePage";
 
 const queryClient = new QueryClient();
@@ -37,7 +37,7 @@ function App() {
           <Route element={<DashboardLayout setIsLoggedIn={setIsLoggedIn} />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/create-event" element={<CreateEventPage />} />
-            <Route path="/events" element={<EventsListPage />} />
+            <Route path="/events" element={<EventManagementPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>
 
