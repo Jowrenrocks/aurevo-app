@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../utils/api"; // ✅ Uses axios baseURL helper
+import { setAuthToken } from "../utils/api"; // ✅ Adds token after login
 import logo from "../assets/logo.png";
 import bg from "../assets/login-bg.png";
 
@@ -19,13 +20,16 @@ export default function LoginPage({ setIsLoggedIn }: LoginPageProps) {
     setLoading(true);
 
     try {
-      const response = await axios.post("http://127.0.0.1:8000/api/login", {
+      const response = await api.post("/auth/login", {
         email,
         password,
       });
 
-      if (response.data.success) {
-        localStorage.setItem("token", response.data.token);
+      const token = response.data.token;
+      if (token) {
+        // Save token and attach it to axios
+        localStorage.setItem("token", token);
+        setAuthToken(token);
         setIsLoggedIn(true);
         alert("Login successful!");
         navigate("/events");
@@ -33,7 +37,8 @@ export default function LoginPage({ setIsLoggedIn }: LoginPageProps) {
         alert("Invalid credentials. Please try again.");
       }
     } catch (error: any) {
-      alert(error.response?.data?.message || "Login failed. Try again.");
+      console.error(error);
+      alert(error.response?.data?.error || "Login failed. Try again.");
     } finally {
       setLoading(false);
     }
@@ -48,7 +53,6 @@ export default function LoginPage({ setIsLoggedIn }: LoginPageProps) {
         backgroundSize: "cover",
       }}
     >
-      {/* CONTENT */}
       <div className="relative z-10 w-full max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between p-8">
         {/* LEFT SIDE */}
         <div className="flex flex-col items-center justify-center text-center md:w-1/2 mb-10 md:mb-0">

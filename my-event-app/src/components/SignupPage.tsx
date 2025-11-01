@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../utils/api";
 import logo from "../assets/logo.png";
 import bg from "../assets/signup-bg.png";
 
@@ -23,8 +23,8 @@ export default function SignupPage() {
     }
 
     try {
-      await axios.post("http://127.0.0.1:8000/api/register", {
-        name,
+      await api.post("/auth/register", {
+        full_name: name,
         email,
         password,
         password_confirmation: confirmPassword,
@@ -33,7 +33,8 @@ export default function SignupPage() {
       alert("Account created successfully!");
       navigate("/login");
     } catch (error: any) {
-      alert(error.response?.data?.message || "Signup failed. Try again.");
+      console.error(error);
+      alert(error.response?.data?.error || "Signup failed. Try again.");
     } finally {
       setLoading(false);
     }
@@ -49,8 +50,6 @@ export default function SignupPage() {
         backgroundPosition: "center",
       }}
     >
-     
-
       <div className="relative z-10 w-full max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between p-8">
         {/* LEFT SIDE - Logo and text */}
         <div className="flex flex-col items-center justify-center text-center md:w-1/2 mb-10 md:mb-0 text-white">
@@ -63,9 +62,7 @@ export default function SignupPage() {
 
         {/* RIGHT SIDE - Signup form box */}
         <div className="bg-white/80 backdrop-blur-md p-8 rounded-2xl shadow-md w-full md:w-1/2 max-w-md">
-          <h2 className="text-2xl font-semibold text-[#6b5536] mb-6 text-center">
-            Sign Up
-          </h2>
+          <h2 className="text-2xl font-semibold text-[#6b5536] mb-6 text-center">Sign Up</h2>
 
           <form onSubmit={handleSignup} className="space-y-4">
             <div>
@@ -118,7 +115,6 @@ export default function SignupPage() {
               />
             </div>
 
-            {/* Submit button */}
             <button
               type="submit"
               className="w-full bg-[#a18665] hover:bg-[#8a7452] text-white font-semibold py-2 rounded-xl transition"
@@ -127,7 +123,6 @@ export default function SignupPage() {
               {loading ? "Signing up..." : "Sign Up"}
             </button>
 
-            {/* Login redirect link */}
             <p className="text-center text-[#6b5536] mt-4">
               Already have an account?{" "}
               <span
