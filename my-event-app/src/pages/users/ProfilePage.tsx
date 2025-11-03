@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import dashboardBg from "../assets/dashboard-bg.png";
-import { Card, CardContent } from "../components/ui/card";
-import { Button } from "../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
 import { User, Mail, Calendar, Edit3 } from "lucide-react";
 
 export default function ProfilePage() {

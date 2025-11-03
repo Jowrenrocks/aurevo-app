@@ -1,7 +1,7 @@
 // src/pages/DashboardPage.jsx
 import React, { useEffect, useState } from "react";
-import { fetchEvents, rsvp } from "../services/events";
-import { initAuth } from "../services/auth";
+import { fetchEvents, rsvp } from "../../services/events";
+import { initAuth } from "../../services/auth";
 
 export default function DashboardPage() {
   const [events, setEvents] = useState([]);
