@@ -25,7 +25,7 @@ import AdminLayout from "./components/AdminLayout";
 import AdminDashboardPage from "./pages/admin/DashboardPage";
 import ViewEventsPage from "./pages/admin/ViewEventsPage";
 import PendingPaymentsPage from "./pages/admin/PendingPaymentsPage";
-
+import EventApprovalPage from "./pages/admin/EventApprovalPage"
 const queryClient = new QueryClient();
 
 function App() {
@@ -83,6 +83,7 @@ function App() {
               </ProtectedRoute>
             }
           >
+            <Route path="/admin/approvals" element={<EventApprovalPage />} />
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
             <Route path="/admin/events" element={<ViewEventsPage />} />
             <Route path="/admin/payments" element={<PendingPaymentsPage />} />

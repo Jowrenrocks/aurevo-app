@@ -8,6 +8,7 @@ import {
   Menu,
   User,
   Bell,
+  CheckCircle,
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -31,6 +32,7 @@ export default function AdminLayout({ setIsLoggedIn }: AdminLayoutProps) {
     { name: "Dashboard", path: "/admin/dashboard", icon: <LayoutDashboard size={20} /> },
     { name: "View Events", path: "/admin/events", icon: <Calendar size={20} /> },
     { name: "Pending Payments", path: "/admin/payments", icon: <DollarSign size={20} /> },
+    { name: "Event Approvals", path: "/admin/approvals", icon: <CheckCircle size={20} /> }
   ];
 
   return (
