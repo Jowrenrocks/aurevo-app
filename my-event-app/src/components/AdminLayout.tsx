@@ -2,18 +2,19 @@ import { useState } from "react";
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
-  CalendarPlus,
-  List,
-  User,
+  Calendar,
+  DollarSign,
   LogOut,
   Menu,
+  User,
+  Bell,
 } from "lucide-react";
 
-interface DashboardLayoutProps {
+interface AdminLayoutProps {
   setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export default function DashboardLayout({ setIsLoggedIn }: DashboardLayoutProps) {
+export default function AdminLayout({ setIsLoggedIn }: AdminLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -25,11 +26,11 @@ export default function DashboardLayout({ setIsLoggedIn }: DashboardLayoutProps)
   navigate("/login");
 };
 
+
   const navItems = [
-    { name: "Dashboard", path: "/user/dashboard", icon: <LayoutDashboard size={20} /> },
-    { name: "Create Event", path: "/user/create-event", icon: <CalendarPlus size={20} /> },
-    { name: "Events", path: "/user/events", icon: <List size={20} /> },
-    { name: "Profile", path: "/user/profile", icon: <User size={20} /> },
+    { name: "Dashboard", path: "/admin/dashboard", icon: <LayoutDashboard size={20} /> },
+    { name: "View Events", path: "/admin/events", icon: <Calendar size={20} /> },
+    { name: "Pending Payments", path: "/admin/payments", icon: <DollarSign size={20} /> },
   ];
 
   return (
@@ -45,7 +46,7 @@ export default function DashboardLayout({ setIsLoggedIn }: DashboardLayoutProps)
         <div className="flex items-center justify-between mb-10">
           {!collapsed && (
             <h1 className="text-xl font-bold tracking-wide whitespace-nowrap">
-              Aurévo
+              Admin Panel
             </h1>
           )}
           <button
@@ -89,14 +90,34 @@ export default function DashboardLayout({ setIsLoggedIn }: DashboardLayoutProps)
 
       {/* Main Content */}
       <main
-        className={`flex-1 bg-[#f9f4ef] p-8 overflow-y-auto transition-all duration-300`}
+        className={`flex-1 bg-[#f9f4ef] min-h-screen overflow-y-auto transition-all duration-300`}
         style={{
-          marginLeft: collapsed ? "5rem" : "16rem", // replaces Tailwind dynamic ml-*
+          marginLeft: collapsed ? "5rem" : "16rem", // adjust content width when collapsed
         }}
       >
-        <div className="bg-[#d9bfa9]/80 rounded-2xl p-6 shadow-lg text-[#2e2e2e]">
-          <Outlet />
-        </div>
+        {/* Header */}
+        <header className="bg-black text-white p-4 flex justify-between items-center sticky top-0 z-20">
+          <div>
+            <h1 className="text-lg font-bold">AURÉVO EVENT MANAGEMENT</h1>
+            <p className="text-xs text-gray-300">
+              NAPOCOR, TAGOLOAN, MISAMIS ORIENTAL
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <Bell className="w-6 h-6" />
+            <div className="flex items-center gap-2">
+              <User className="w-6 h-6" />
+              <span className="font-semibold">ADMIN</span>
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <section className="p-8 text-[#2e2e2e] bg-[url('/src/assets/dashboard-bg.png')] bg-cover bg-center min-h-[calc(100vh-80px)]">
+          <div className="bg-[#d9bfa9]/80 rounded-2xl p-6 shadow-lg">
+            <Outlet />
+          </div>
+        </section>
       </main>
     </div>
   );

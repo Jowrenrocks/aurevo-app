@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../utils/api";
+import api, { setAuthToken } from "../utils/api";
 import logo from "../assets/logo.png";
 import bg from "../assets/signup-bg.png";
 
@@ -23,15 +23,31 @@ export default function SignupPage() {
     }
 
     try {
-      await api.post("/auth/register", {
+      // Register user
+      const response = await api.post("/auth/register", {
         full_name: name,
         email,
         password,
         password_confirmation: confirmPassword,
       });
 
+      const { token, user } = response.data;
+
+      // Save token + role
+      localStorage.setItem("token", token);
+      localStorage.setItem("role", user.role || "user");
+
+      setAuthToken(token);
+
       alert("Account created successfully!");
-      navigate("/login");
+
+      // Redirect based on role
+      if (user.role === "admin") {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/user/dashboard");
+      }
+
     } catch (error: any) {
       console.error(error);
       alert(error.response?.data?.error || "Signup failed. Try again.");
@@ -51,7 +67,8 @@ export default function SignupPage() {
       }}
     >
       <div className="relative z-10 w-full max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between p-8">
-        {/* LEFT SIDE - Logo and text */}
+
+        {/* LEFT SIDE */}
         <div className="flex flex-col items-center justify-center text-center md:w-1/2 mb-10 md:mb-0 text-white">
           <img src={logo} alt="Aurévo Logo" className="w-24 h-24 object-contain mb-4" />
           <h1 className="text-4xl font-bold text-white mb-4">EVENT MANAGEMENT</h1>
@@ -60,7 +77,7 @@ export default function SignupPage() {
           </p>
         </div>
 
-        {/* RIGHT SIDE - Signup form box */}
+        {/* RIGHT SIDE */}
         <div className="bg-white/80 backdrop-blur-md p-8 rounded-2xl shadow-md w-full md:w-1/2 max-w-md">
           <h2 className="text-2xl font-semibold text-[#6b5536] mb-6 text-center">Sign Up</h2>
 
@@ -134,6 +151,7 @@ export default function SignupPage() {
             </p>
           </form>
         </div>
+
       </div>
     </div>
   );

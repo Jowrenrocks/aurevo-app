@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import dashboardBg from "../assets/dashboard-bg.png";
+import dashboardBg from "../../assets/dashboard-bg.png";
 import { motion } from "framer-motion";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";

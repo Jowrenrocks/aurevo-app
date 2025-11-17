@@ -1,5 +1,5 @@
 import React from "react";
-import backgroundImage from "../assets/hero-bg.webp";
+import backgroundImage from "../assets/hero-bg.png";
 
 export default function HeroSection() {
   return (

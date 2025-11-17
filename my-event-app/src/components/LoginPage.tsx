@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../utils/api"; // ✅ Uses axios baseURL helper
-import { setAuthToken } from "../utils/api"; // ✅ Adds token after login
+import api, { setAuthToken } from "../utils/api"; 
 import logo from "../assets/logo.png";
 import bg from "../assets/login-bg.png";
 
@@ -16,33 +15,37 @@ export default function LoginPage({ setIsLoggedIn }: LoginPageProps) {
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      const response = await api.post("/auth/login", {
-        email,
-        password,
-      });
+  try {
+    const response = await api.post("/auth/login", { email, password });
+    const { token, user } = response.data;
 
-      const token = response.data.token;
-      if (token) {
-        // Save token and attach it to axios
-        localStorage.setItem("token", token);
-        setAuthToken(token);
-        setIsLoggedIn(true);
-        alert("Login successful!");
-        navigate("/events");
-      } else {
-        alert("Invalid credentials. Please try again.");
-      }
-    } catch (error: any) {
-      console.error(error);
-      alert(error.response?.data?.error || "Login failed. Try again.");
-    } finally {
-      setLoading(false);
+    if (token && user) {
+      // ✅ Save both token and role
+      localStorage.setItem("token", token);
+      localStorage.setItem("role", user.role || "user");
+
+      setAuthToken(token);
+      setIsLoggedIn(true);
+
+      alert("Login successful!");
+
+      // ✅ Redirect based on role
+      if (user.role === "admin") navigate("/admin/dashboard");
+      else navigate("/user/dashboard");
+    } else {
+      alert("Invalid credentials. Please try again.");
     }
-  };
+  } catch (error: any) {
+    console.error("Login error:", error);
+    alert(error.response?.data?.error || "Login failed. Try again.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div
