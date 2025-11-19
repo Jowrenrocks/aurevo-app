@@ -1,19 +1,36 @@
 <?php
 namespace App\Http\Controllers;
+
 use Illuminate\Http\Request;
 use App\Models\Event;
-use App\Models\Rsvp;
+use App\Models\RsvpGuest;
 
-class RsvpController extends Controller {
-  public function respond(Request $r, $eventId){
-    $r->validate(['response'=>'required|in:yes,no,maybe']);
-    $user = auth()->user();
-    $event = Event::findOrFail($eventId);
-    $rsvp = Rsvp::updateOrCreate(
-      ['user_id'=>$user->id,'event_id'=>$event->id],
-      ['response'=>$r->response]
-    );
-    // dispatch notification to event creator if needed
-    return response()->json($rsvp,200);
-  }
+class GuestRsvpController extends Controller
+{
+    public function getEventPublic($id)
+    {
+        $event = Event::findOrFail($id);
+        return response()->json($event);
+    }
+
+    public function submitRsvp(Request $request, $eventId)
+    {
+        $validated = $request->validate([
+            'full_name' => 'required|string|max:255',
+            'email' => 'required|email',
+            'phone' => 'required|string',
+            'number_of_guests' => 'required|integer|min:1',
+            'dietary_restrictions' => 'nullable|string',
+            'message' => 'nullable|string'
+        ]);
+
+        $rsvp = RsvpGuest::create([
+            'event_id' => $eventId,
+            ...$validated
+        ]);
+
+        // TODO: Send confirmation email
+
+        return response()->json(['message' => 'RSVP submitted successfully!', 'rsvp' => $rsvp]);
+    }
 }

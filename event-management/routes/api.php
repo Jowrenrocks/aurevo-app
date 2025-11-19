@@ -19,4 +19,7 @@ Route::middleware(['auth:api'])->group(function(){
   Route::get('events/{id}/attendees', [EventController::class,'attendees']);
 
   Route::post('events/{id}/rsvp', [RsvpController::class,'respond']);
+  
+  Route::get('events/{id}/public', [GuestRsvpController::class, 'getEventPublic']);
+  Route::post('events/{id}/rsvp-guest', [GuestRsvpController::class, 'submitRsvp']);
 });

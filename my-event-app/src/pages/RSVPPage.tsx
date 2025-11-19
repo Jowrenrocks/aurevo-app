@@ -1,283 +1,305 @@
 import { useState, useEffect } from "react";
-import bg from "../assets/rsvp-bg.png"; // use your background image
-import theme1 from "../assets/theme1.png";
-import theme2 from "../assets/theme2.png";
-import theme3 from "../assets/theme3.png";
-import theme4 from "../assets/theme4.png";
-import theme5 from "../assets/theme5.png";
-import theme6 from "../assets/theme6.png";
-import theme7 from "../assets/theme7.png";
-import theme8 from "../assets/theme8.png";
+import { useParams, useNavigate } from "react-router-dom";
+import { CheckCircle } from "lucide-react";
+import bg from "../assets/rsvp-bg.png";
 
-export default function RSVPPage() {
-  const [step, setStep] = useState(1);
-  const [eventData, setEventData] = useState({
-    eventName: "",
-    startDate: "",
-    startTime: "",
-    endDate: "",
-    endTime: "",
-    theme: "",
-    name: "",
-    place: "",
-    date: "",
-    time: "",
+interface GuestInfo {
+  fullName: string;
+  email: string;
+  phone: string;
+  numberOfGuests: number;
+  dietaryRestrictions: string;
+  message: string;
+}
+
+export default function PublicRSVPPage() {
+  const { eventId } = useParams<{ eventId: string }>();
+  const navigate = useNavigate();
+  
+  const [event, setEvent] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitted, setSubmitted] = useState(false);
+  const [guestInfo, setGuestInfo] = useState<GuestInfo>({
+    fullName: "",
+    email: "",
+    phone: "",
+    numberOfGuests: 1,
+    dietaryRestrictions: "",
+    message: ""
   });
 
-  // Load last step and data from localStorage
+  // Mock event data - replace with API call
   useEffect(() => {
-    const savedStep = localStorage.getItem("rsvpStep");
-    const savedData = localStorage.getItem("rsvpData");
-    if (savedStep) setStep(Number(savedStep));
-    if (savedData) setEventData(JSON.parse(savedData));
-  }, []);
+    const fetchEvent = async () => {
+      // TODO: Replace with actual API call
+      // const response = await api.get(`/events/${eventId}/public`);
+      
+      // Mock data for now
+      const mockEvent = {
+        id: eventId,
+        title: "Wedding Reception - Smith & Jones",
+        date: "December 15, 2025",
+        time: "6:00 PM",
+        venue: "Tagoloan Convention Center",
+        venueAddress: "Napocor, Tagoloan, Misamis Oriental",
+        theme: "Elegant Garden",
+        hosts: "John Smith & Jane Jones",
+        description: "Join us in celebrating our special day!",
+        maxGuests: 2,
+        backgroundImage: bg
+      };
+      
+      setEvent(mockEvent);
+      setLoading(false);
+    };
 
-  // Save progress
-  useEffect(() => {
-    localStorage.setItem("rsvpStep", step.toString());
-    localStorage.setItem("rsvpData", JSON.stringify(eventData));
-  }, [step, eventData]);
+    if (eventId) {
+      fetchEvent();
+    }
+  }, [eventId]);
 
-  const handleNext = () => {
-    if (step < 5) setStep(step + 1);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setGuestInfo(prev => ({
+      ...prev,
+      [name]: name === "numberOfGuests" ? parseInt(value) || 1 : value
+    }));
   };
 
-  const handlePrev = () => {
-    if (step > 1) setStep(step - 1);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // TODO: Submit to API
+    // await api.post(`/events/${eventId}/rsvp`, guestInfo);
+    
+    console.log("RSVP Submitted:", guestInfo);
+    setSubmitted(true);
+    
+    // Auto-redirect after 5 seconds
+    setTimeout(() => {
+      navigate("/");
+    }, 5000);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEventData({ ...eventData, [e.target.name]: e.target.value });
-  };
-
-  const handleThemeSelect = (theme: string) => {
-    setEventData({ ...eventData, theme });
-    handleNext();
-  };
-
-  const handleSubmit = () => {
-    localStorage.removeItem("rsvpStep");
-    localStorage.removeItem("rsvpData");
-    setStep(5); // final confirmation page
-  };
-
-  const StepIndicator = () => (
-    <div className="flex justify-center items-center space-x-6 text-white mb-8">
-      {["Event Name", "Event Details", "Choose Theme", "Event Info"].map((label, i) => (
-        <div key={i} className="flex items-center space-x-2">
-          <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-              step === i + 1 ? "bg-[#f4b860] text-black" : "bg-white text-black"
-            }`}
-          >
-            {i + 1}
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-cover bg-center flex items-center justify-center" style={{ backgroundImage: `url(${bg})` }}>
+        <div className="bg-white/90 backdrop-blur-md rounded-2xl p-8 shadow-2xl">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-gray-300 rounded w-48"></div>
+            <div className="h-4 bg-gray-300 rounded w-32"></div>
           </div>
-          <span className="tracking-widest text-xs uppercase">{label}</span>
-          {i < 3 && <div className="w-10 h-[2px] bg-white"></div>}
         </div>
-      ))}
-    </div>
-  );
+      </div>
+    );
+  }
+
+  if (!event) {
+    return (
+      <div className="min-h-screen bg-cover bg-center flex items-center justify-center" style={{ backgroundImage: `url(${bg})` }}>
+        <div className="bg-white/90 backdrop-blur-md rounded-2xl p-8 shadow-2xl text-center max-w-md">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Event Not Found</h2>
+          <p className="text-gray-600 mb-6">This RSVP link appears to be invalid or expired.</p>
+          <button
+            onClick={() => navigate("/")}
+            className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-amber-600 hover:to-orange-600 transition-all"
+          >
+            Return to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-cover bg-center flex items-center justify-center" style={{ backgroundImage: `url(${bg})` }}>
+        <div className="bg-white/90 backdrop-blur-md rounded-2xl p-12 shadow-2xl text-center max-w-xl">
+          <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-12 h-12 text-white" />
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">RSVP Confirmed!</h2>
+          <p className="text-lg text-gray-700 mb-2">
+            Thank you, <span className="font-semibold text-amber-600">{guestInfo.fullName}</span>!
+          </p>
+          <p className="text-gray-600 mb-6">
+            Your RSVP for <strong>{guestInfo.numberOfGuests}</strong> {guestInfo.numberOfGuests === 1 ? "guest" : "guests"} has been received.
+          </p>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+            <p className="text-sm text-gray-700">
+              A confirmation email has been sent to <strong>{guestInfo.email}</strong>
+            </p>
+          </div>
+          <p className="text-sm text-gray-500">
+            Redirecting to home page in 5 seconds...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div
-      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-center text-white"
-      style={{ backgroundImage: `url(${bg})` }}
-    >
-      <h1 className="text-sm tracking-[6px] mb-4 uppercase">
-        MAKE EVERY OCCASION UNFORGETTABLE WITH AURÉVO
-      </h1>
-
-      <StepIndicator />
-
-      {/* STEP 1 */}
-      {step === 1 && (
-        <div className="flex flex-col items-center space-y-6">
-          <h2 className="text-xl tracking-widest font-semibold">
-            WHAT IS THE NAME OF YOUR EVENT?
-          </h2>
-          <input
-            type="text"
-            name="eventName"
-            value={eventData.eventName}
-            onChange={handleChange}
-            placeholder="Enter event name"
-            className="p-3 rounded-xl w-[400px] text-black text-center"
-          />
-          <button
-            onClick={handleNext}
-            className="bg-black px-8 py-3 rounded-xl text-white tracking-[4px] uppercase hover:bg-[#f4b860] hover:text-black transition"
-          >
-            Continue to Next Step
-          </button>
-        </div>
-      )}
-
-      {/* STEP 2 */}
-      {step === 2 && (
-        <div className="flex flex-col items-center space-y-6">
-          <h2 className="text-xl tracking-widest font-semibold">
-            WHEN IS YOUR EVENT?
-          </h2>
-          <div className="flex gap-6">
-            <div>
-              <p className="mb-2">Event Start</p>
-              <input
-                type="date"
-                name="startDate"
-                value={eventData.startDate}
-                onChange={handleChange}
-                className="p-2 rounded-xl text-black"
-              />
-              <input
-                type="time"
-                name="startTime"
-                value={eventData.startTime}
-                onChange={handleChange}
-                className="p-2 rounded-xl text-black ml-2"
-              />
+    <div className="min-h-screen bg-cover bg-center" style={{ backgroundImage: `url(${bg})` }}>
+      <div className="min-h-screen bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="max-w-4xl w-full">
+          {/* Event Info Card */}
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl mb-6 overflow-hidden">
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white p-8 text-center">
+              <h1 className="text-4xl font-bold mb-3">{event.title}</h1>
+              <p className="text-xl">You're Invited!</p>
             </div>
-            <div>
-              <p className="mb-2">Event End</p>
-              <input
-                type="date"
-                name="endDate"
-                value={eventData.endDate}
-                onChange={handleChange}
-                className="p-2 rounded-xl text-black"
-              />
-              <input
-                type="time"
-                name="endTime"
-                value={eventData.endTime}
-                onChange={handleChange}
-                className="p-2 rounded-xl text-black ml-2"
-              />
+            
+            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-2">📅 Date & Time</h3>
+                <p className="text-gray-700">{event.date}</p>
+                <p className="text-gray-700">{event.time}</p>
+              </div>
+              
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-2">📍 Venue</h3>
+                <p className="text-gray-700">{event.venue}</p>
+                <p className="text-sm text-gray-600">{event.venueAddress}</p>
+              </div>
+              
+              <div className="md:col-span-2">
+                <h3 className="font-semibold text-gray-900 mb-2">💝 Hosted By</h3>
+                <p className="text-gray-700">{event.hosts}</p>
+              </div>
+              
+              {event.description && (
+                <div className="md:col-span-2 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <p className="text-gray-700">{event.description}</p>
+                </div>
+              )}
             </div>
           </div>
-          <div className="flex gap-4 mt-4">
-            <button
-              onClick={handlePrev}
-              className="bg-gray-500 px-6 py-2 rounded-xl uppercase"
-            >
-              Back
-            </button>
-            <button
-              onClick={handleNext}
-              className="bg-black px-8 py-3 rounded-xl text-white tracking-[4px] uppercase hover:bg-[#f4b860] hover:text-black transition"
-            >
-              Continue
-            </button>
-          </div>
-        </div>
-      )}
 
-      {/* STEP 3 */}
-      {step === 3 && (
-        <div className="flex flex-col items-center space-y-6">
-          <h2 className="text-xl tracking-widest font-semibold mb-2">
-            CHOOSE A THEME
-          </h2>
-          <p className="text-sm mb-4">TO GIVE YOU A HEAD START ON YOUR EVENT!</p>
-          <div className="grid grid-cols-4 gap-4">
-            {[theme1, theme2, theme3, theme4, theme5, theme6, theme7, theme8].map((t, i) => (
-              <img
-                key={i}
-                src={t}
-                alt={`Theme ${i + 1}`}
-                onClick={() => handleThemeSelect(t)}
-                className={`w-40 h-60 rounded-lg cursor-pointer border-4 ${
-                  eventData.theme === t ? "border-[#f4b860]" : "border-transparent"
-                } hover:scale-105 transition`}
-              />
-            ))}
-          </div>
-          <button
-            onClick={handlePrev}
-            className="bg-gray-500 px-6 py-2 rounded-xl uppercase mt-6"
-          >
-            Back
-          </button>
-        </div>
-      )}
-
-      {/* STEP 4 */}
-      {step === 4 && (
-        <div className="flex flex-col items-center space-y-4">
-          <h2 className="text-xl tracking-widest font-semibold mb-2">
-            FILL OUT YOUR EVENT INFORMATION
-          </h2>
-
-          <div className="flex gap-12 items-start">
-            {eventData.theme && (
-              <img
-                src={eventData.theme}
-                alt="Selected Theme"
-                className="w-64 rounded-lg shadow-lg"
-              />
-            )}
-            <div className="space-y-4 text-black">
-              {["name", "place", "date", "time"].map((field) => (
-                <div key={field}>
-                  <label className="text-white uppercase tracking-widest mr-2">
-                    {field}:
+          {/* RSVP Form */}
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">RSVP Form</h2>
+            
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Full Name *
                   </label>
                   <input
                     type="text"
-                    name={field}
-                    value={(eventData as any)[field]}
+                    name="fullName"
+                    value={guestInfo.fullName}
                     onChange={handleChange}
-                    className="p-2 rounded-xl w-64"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    placeholder="John Doe"
+                    required
                   />
                 </div>
-              ))}
-            </div>
-          </div>
 
-          <div className="flex gap-4 mt-6">
-            <button
-              onClick={handlePrev}
-              className="bg-gray-500 px-6 py-2 rounded-xl uppercase"
-            >
-              Back
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="bg-green-600 px-8 py-3 rounded-xl text-white tracking-[4px] uppercase hover:bg-green-500 transition"
-            >
-              Submit
-            </button>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={guestInfo.email}
+                    onChange={handleChange}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    placeholder="john@example.com"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={guestInfo.phone}
+                    onChange={handleChange}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    placeholder="+63 XXX XXX XXXX"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Number of Guests *
+                  </label>
+                  <select
+                    name="numberOfGuests"
+                    value={guestInfo.numberOfGuests}
+                    onChange={handleChange}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    required
+                  >
+                    {[...Array(event.maxGuests || 5)].map((_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        {i + 1} {i === 0 ? "Guest" : "Guests"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Dietary Restrictions (Optional)
+                </label>
+                <input
+                  type="text"
+                  name="dietaryRestrictions"
+                  value={guestInfo.dietaryRestrictions}
+                  onChange={handleChange}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  placeholder="e.g., Vegetarian, Gluten-free, Allergies"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Message to Hosts (Optional)
+                </label>
+                <textarea
+                  name="message"
+                  value={guestInfo.message}
+                  onChange={handleChange}
+                  rows={4}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+                  placeholder="Send your congratulations or special requests..."
+                />
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <p className="text-sm text-gray-700">
+                  <strong>Note:</strong> Your RSVP is important to help us prepare for the event. 
+                  Please respond by at least 2 weeks before the event date.
+                </p>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => navigate("/")}
+                  className="flex-1 bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white py-3 rounded-lg font-semibold hover:from-green-600 hover:to-emerald-600 transition-all shadow-lg"
+                >
+                  Confirm RSVP
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      )}
-
-      {/* STEP 5 — Confirmation */}
-      {step === 5 && (
-        <div className="text-center space-y-6">
-          <h2 className="text-sm tracking-[6px] uppercase">
-            YOUR RSVP HAS BEEN CONFIRMED
-          </h2>
-          <div className="flex justify-center">
-            {eventData.theme && (
-              <img
-                src={eventData.theme}
-                alt="Final Theme"
-                className="w-64 rounded-lg shadow-lg"
-              />
-            )}
-          </div>
-          <p className="text-lg max-w-md mx-auto leading-relaxed">
-            THANK YOU FOR AVAILING AND TRUSTING OUR EVENT. WE HOPE YOU ENJOYED
-            YOUR DAY!
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-[#f4b860] text-black px-8 py-3 rounded-xl tracking-[4px] uppercase hover:bg-white transition"
-          >
-            Share
-          </button>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

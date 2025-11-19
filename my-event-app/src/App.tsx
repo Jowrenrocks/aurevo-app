@@ -59,7 +59,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<LoginPage setIsLoggedIn={setIsLoggedIn} />} />
           <Route path="/signup" element={<SignupPage />} />
-          <Route path="/rsvp" element={<RSVPPage />} />
+          <Route path="/rsvp/:eventId" element={<RSVPPage />} />
 
           {/* User Routes */}
           <Route

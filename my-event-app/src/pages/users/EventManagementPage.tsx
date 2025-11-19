@@ -120,6 +120,16 @@ export default function EventManagementPage() {
                           onClick={() => handleDelete(event.id)}
                         >
                           <Trash2 size={14} />
+                        <button
+                          onClick={() => {
+                            const link = `${window.location.origin}/rsvp/${event.id}`;
+                            navigator.clipboard.writeText(link);
+                            alert('RSVP link copied to clipboard!');
+                          }}
+                          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                        >
+                          Copy RSVP Link
+                        </button>
                         </Button>
                       </td>
                     </tr>
