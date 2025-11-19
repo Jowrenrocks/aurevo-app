@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "./components/ui/toaster";
+import { Toaster } from "react-hot-toast";
 import { TooltipProvider } from "./components/ui/tooltip";
 
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -25,7 +25,8 @@ import AdminLayout from "./components/AdminLayout";
 import AdminDashboardPage from "./pages/admin/DashboardPage";
 import ViewEventsPage from "./pages/admin/ViewEventsPage";
 import PendingPaymentsPage from "./pages/admin/PendingPaymentsPage";
-import EventApprovalPage from "./pages/admin/EventApprovalPage"
+import EventApprovalPage from "./pages/admin/EventApprovalPage";
+
 const queryClient = new QueryClient();
 
 function App() {
@@ -39,9 +40,11 @@ function App() {
       setIsLoggedIn(true);
     }
 
-    // 🔁 Auto-redirect if user refreshes the browser
     if (token && role) {
-      if (window.location.pathname === "/" || window.location.pathname === "/login") {
+      if (
+        window.location.pathname === "/" ||
+        window.location.pathname === "/login"
+      ) {
         if (role === "admin") {
           window.location.href = "/admin/dashboard";
         } else {
@@ -54,10 +57,17 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+
+        {/* ✅ Added EXACTLY as you requested */}
+        <Toaster position="top-right" />
+
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<LoginPage setIsLoggedIn={setIsLoggedIn} />} />
+          <Route
+            path="/login"
+            element={<LoginPage setIsLoggedIn={setIsLoggedIn} />}
+          />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/rsvp/:eventId" element={<RSVPPage />} />
 
@@ -92,8 +102,6 @@ function App() {
           {/* Fallback */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-
-        <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
   );
