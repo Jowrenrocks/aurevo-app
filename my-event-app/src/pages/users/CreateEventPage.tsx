@@ -1,28 +1,33 @@
 import { useState } from 'react';
 import { Calendar, Users, MapPin, DollarSign, Clock, FileText, CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // For redirect after success
+import toast, { Toaster } from 'react-hot-toast'; // Added for notifications
 import dashboardBg from "../../assets/dashboard-bg.png";
 
 const STEPS = [
   { id: 1, title: 'Basic Info', icon: FileText },
   { id: 2, title: 'Details', icon: Calendar },
-  { id: 3, title: 'Services', icon: Users },
+  { id: 3, title: 'Services Needed', icon: Users },
   { id: 4, title: 'Review', icon: CheckCircle }
 ];
 
 const VENUES = [
-  { id: 1, name: 'Tagoloan Convention Center', capacity: 500, price: 50000 },
-  { id: 2, name: 'SMX Convention Center', capacity: 1000, price: 100000 },
-  { id: 3, name: 'Luxury Garden Resort', capacity: 300, price: 75000 },
-  { id: 4, name: 'Private Residence', capacity: 150, price: 30000 }
+  { id: 1, name: 'Tagoloan Convention Center', capacity: 500 },
+  { id: 2, name: 'SMX Convention Center', capacity: 1000 },
+  { id: 3, name: 'Luxury Garden Resort', capacity: 300 },
+  { id: 4, name: 'Private Residence', capacity: 150 },
+  { id: 5, name: 'Custom Venue', capacity: 0 }
 ];
 
 const SERVICES = [
-  { id: 1, name: 'Catering', price: 500, unit: 'per person', icon: '🍽️' },
-  { id: 2, name: 'Photography', price: 25000, unit: 'package', icon: '📷' },
-  { id: 3, name: 'Videography', price: 35000, unit: 'package', icon: '🎥' },
-  { id: 4, name: 'DJ/Entertainment', price: 20000, unit: 'package', icon: '🎵' },
-  { id: 5, name: 'Decorations', price: 40000, unit: 'package', icon: '🎨' },
-  { id: 6, name: 'Event Coordinator', price: 15000, unit: 'package', icon: '👔' }
+  { id: 1, name: 'Catering', icon: '🍽️' },
+  { id: 2, name: 'Photography', icon: '📷' },
+  { id: 3, name: 'Videography', icon: '🎥' },
+  { id: 4, name: 'DJ/Entertainment', icon: '🎵' },
+  { id: 5, name: 'Decorations', icon: '🎨' },
+  { id: 6, name: 'Event Coordinator', icon: '👔' },
+  { id: 7, name: 'Sound System', icon: '🔊' },
+  { id: 8, name: 'Lighting', icon: '💡' }
 ];
 
 const EVENT_TYPES = [
@@ -32,6 +37,8 @@ const EVENT_TYPES = [
   { id: 'anniversary', name: 'Anniversary', icon: '💝', color: 'from-purple-400 to-pink-500' },
   { id: 'other', name: 'Other', icon: '🎉', color: 'from-amber-400 to-orange-500' }
 ];
+
+const API_BASE = 'http://localhost:8000/api'; // Adjust to your Laravel API URL
 
 function StepIndicator({ currentStep }) {
   return (
@@ -138,20 +145,6 @@ function Step1BasicInfo({ formData, updateFormData }) {
           />
         </div>
       </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Email Address *
-        </label>
-        <input
-          type="email"
-          value={formData.email}
-          onChange={(e) => updateFormData('email', e.target.value)}
-          placeholder="your.email@example.com"
-          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-          required
-        />
-      </div>
     </div>
   );
 }
@@ -184,11 +177,7 @@ function Step2Details({ formData, updateFormData }) {
               <div className="text-sm text-gray-600 space-y-1">
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4" />
-                  <span>Up to {venue.capacity} guests</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4" />
-                  <span className="font-medium text-amber-600">₱{venue.price.toLocaleString()}</span>
+                  <span>Capacity: {venue.capacity > 0 ? `${venue.capacity} guests` : 'Custom'}</span>
                 </div>
               </div>
             </button>
@@ -213,6 +202,23 @@ function Step2Details({ formData, updateFormData }) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
+            Expected Guests *
+          </label>
+          <input
+            type="number"
+            value={formData.expectedGuests}
+            onChange={(e) => updateFormData('expectedGuests', e.target.value)}
+            placeholder="Number of guests"
+            min="1"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Start Time *
           </label>
           <input
@@ -223,9 +229,7 @@ function Step2Details({ formData, updateFormData }) {
             required
           />
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             End Time *
@@ -234,21 +238,6 @@ function Step2Details({ formData, updateFormData }) {
             type="time"
             value={formData.endTime}
             onChange={(e) => updateFormData('endTime', e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Expected Guests *
-          </label>
-          <input
-            type="number"
-            value={formData.expectedGuests}
-            onChange={(e) => updateFormData('expectedGuests', e.target.value)}
-            placeholder="Number of guests"
-            min="1"
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
             required
           />
@@ -279,15 +268,8 @@ function Step3Services({ formData, updateFormData }) {
     if (exists) {
       updateFormData('services', services.filter(s => s.id !== service.id));
     } else {
-      updateFormData('services', [...services, { ...service, quantity: 1 }]);
+      updateFormData('services', [...services, service]);
     }
-  };
-
-  const updateQuantity = (serviceId, quantity) => {
-    const services = formData.services.map(s =>
-      s.id === serviceId ? { ...s, quantity: parseInt(quantity) || 1 } : s
-    );
-    updateFormData('services', services);
   };
 
   const isSelected = (serviceId) => {
@@ -296,79 +278,55 @@ function Step3Services({ formData, updateFormData }) {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Select Services</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">Services Needed</h2>
+      <p className="text-gray-600 mb-4">
+        Select the services you'll be arranging for your event. This helps track your event requirements.
+      </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {SERVICES.map(service => {
           const selected = isSelected(service.id);
-          const selectedService = (formData.services || []).find(s => s.id === service.id);
           
           return (
             <div
               key={service.id}
-              className={`p-4 rounded-xl border-2 transition-all ${
-                selected ? 'border-amber-500 bg-amber-50' : 'border-gray-200'
+              className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                selected ? 'border-amber-500 bg-amber-50' : 'border-gray-200 hover:border-gray-300'
               }`}
+              onClick={() => toggleService(service)}
             >
-              <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">{service.icon}</span>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{service.name}</h3>
-                    <p className="text-sm text-gray-600">
-                      ₱{service.price.toLocaleString()} {service.unit}
-                    </p>
-                  </div>
+                  <h3 className="font-semibold text-gray-900">{service.name}</h3>
                 </div>
                 <button
                   type="button"
-                  onClick={() => toggleService(service)}
                   className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
                     selected
                       ? 'bg-amber-500 border-amber-500'
-                      : 'border-gray-300 hover:border-amber-500'
+                      : 'border-gray-300'
                   }`}
                 >
                   {selected && <CheckCircle className="w-4 h-4 text-white" />}
                 </button>
               </div>
-
-              {selected && service.unit === 'per person' && (
-                <div className="mt-3">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Quantity
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={selectedService?.quantity || 1}
-                    onChange={(e) => updateQuantity(service.id, e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                  />
-                </div>
-              )}
             </div>
           );
         })}
+      </div>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-6">
+        <p className="text-sm text-gray-700">
+          <strong>Note:</strong> You'll be responsible for contacting and paying these service providers directly. 
+          This list is just to help you track what you need for your event.
+        </p>
       </div>
     </div>
   );
 }
 
 function Step4Review({ formData }) {
-  const calculateTotal = () => {
-    let total = formData.venue?.price || 0;
-    
-    (formData.services || []).forEach(service => {
-      const baseService = SERVICES.find(s => s.id === service.id);
-      if (baseService) {
-        total += baseService.price * (service.quantity || 1);
-      }
-    });
-    
-    return total;
-  };
-
   const eventType = EVENT_TYPES.find(t => t.id === formData.eventType);
 
   return (
@@ -412,7 +370,7 @@ function Step4Review({ formData }) {
           <div className="flex items-center gap-3">
             <Users className="w-5 h-5 text-amber-600" />
             <div>
-              <p className="text-xs text-gray-600">Guests</p>
+              <p className="text-xs text-gray-600">Expected Guests</p>
               <p className="font-medium">{formData.expectedGuests} people</p>
             </div>
           </div>
@@ -423,43 +381,30 @@ function Step4Review({ formData }) {
         <h3 className="font-bold text-lg mb-4">Contact Information</h3>
         <div className="space-y-2 text-sm">
           <p><span className="font-medium">Host:</span> {formData.hostName}</p>
-          <p><span className="font-medium">Email:</span> {formData.email}</p>
           <p><span className="font-medium">Phone:</span> {formData.contactNumber}</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl p-6 border border-gray-200">
-        <h3 className="font-bold text-lg mb-4">Cost Breakdown</h3>
-        <div className="space-y-3">
-          <div className="flex justify-between items-center pb-3 border-b">
-            <span>Venue: {formData.venue?.name}</span>
-            <span className="font-medium">₱{formData.venue?.price.toLocaleString()}</span>
+      {formData.services && formData.services.length > 0 && (
+        <div className="bg-white rounded-xl p-6 border border-gray-200">
+          <h3 className="font-bold text-lg mb-4">Services You're Arranging</h3>
+          <div className="flex flex-wrap gap-2">
+            {formData.services.map(service => (
+              <span key={service.id} className="bg-amber-100 text-amber-800 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                <span>{service.icon}</span>
+                {service.name}
+              </span>
+            ))}
           </div>
-
-          {(formData.services || []).map(service => {
-            const baseService = SERVICES.find(s => s.id === service.id);
-            const cost = baseService.price * (service.quantity || 1);
-            return (
-              <div key={service.id} className="flex justify-between items-center pb-3 border-b">
-                <span>
-                  {baseService.name}
-                  {service.quantity > 1 && ` (×${service.quantity})`}
-                </span>
-                <span className="font-medium">₱{cost.toLocaleString()}</span>
-              </div>
-            );
-          })}
-
-          <div className="flex justify-between items-center pt-3 text-lg font-bold text-amber-600">
-            <span>Total</span>
-            <span>₱{calculateTotal().toLocaleString()}</span>
-          </div>
+          <p className="text-sm text-gray-600 mt-4">
+            Remember: You'll need to contact and book these services separately.
+          </p>
         </div>
-      </div>
+      )}
 
       {formData.notes && (
         <div className="bg-white rounded-xl p-6 border border-gray-200">
-          <h3 className="font-bold text-lg mb-2">Special Requests</h3>
+          <h3 className="font-bold text-lg mb-2">Special Notes</h3>
           <p className="text-sm text-gray-600">{formData.notes}</p>
         </div>
       )}
@@ -474,7 +419,6 @@ export default function EventCreationWizard() {
     eventName: '',
     hostName: '',
     contactNumber: '',
-    email: '',
     venue: null,
     eventDate: '',
     startTime: '',
@@ -484,6 +428,7 @@ export default function EventCreationWizard() {
     services: []
   });
   const [submitted, setSubmitted] = useState(false);
+  const navigate = useNavigate();
 
   const updateFormData = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -493,7 +438,7 @@ export default function EventCreationWizard() {
     switch (currentStep) {
       case 1:
         return formData.eventType && formData.eventName && formData.hostName && 
-               formData.contactNumber && formData.email;
+               formData.contactNumber;
       case 2:
         return formData.venue && formData.eventDate && formData.startTime && 
                formData.endTime && formData.expectedGuests;
@@ -529,7 +474,6 @@ export default function EventCreationWizard() {
           eventName: '',
           hostName: '',
           contactNumber: '',
-          email: '',
           venue: null,
           eventDate: '',
           startTime: '',
@@ -563,9 +507,8 @@ export default function EventCreationWizard() {
 
   return (
     <div 
-      className="min-h-screen bg-cover bg-center p-6"
-      style={{ backgroundImage: `url(${dashboardBg})` }}
-    >
+    className="min-h-screen bg-cover bg-center p-6"
+    style={{ backgroundImage: `url(${dashboardBg})` }}>
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Create Your Event</h1>

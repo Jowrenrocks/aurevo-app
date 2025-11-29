@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form"; 
 import toast, { Toaster } from 'react-hot-toast';
+import api, { setAuthToken } from '../../utils/api'; // Import from your api.js
 import dashboardBg from "../../assets/dashboard-bg.png";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
-import { CalendarDays, Edit3, Trash2, CheckCircle, XCircle, Plus, Loader2 } from "lucide-react";
+import { CalendarDays, Edit3, Trash2, CheckCircle, XCircle, Loader2, RefreshCw } from "lucide-react";
 
 // Updated to match your Laravel Event model
 interface Event {
@@ -29,30 +30,35 @@ const VENUES = [
   { id: 4, name: 'Private Residence', capacity: 150, price: 30000 }
 ];
 
-const API_BASE = 'http://localhost:8000/api'; // Adjust to your Laravel API URL
-
 export default function EventManagementPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
 
-  // Fetch events from Laravel API
+  // Fetch events using Axios with better error handling
   const fetchEvents = async () => {
     try {
-      const token = localStorage.getItem('token'); // Assumes token is stored here
-      const response = await fetch(`${API_BASE}/events`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setEvents(data);
-      } else {
-        console.error('Failed to fetch events:', response.statusText);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('No authentication token found. Please log in.');
+        setLoading(false);
+        return;
       }
-    } catch (error) {
+      setAuthToken(token); // Set token globally for Axios
+
+      const response = await api.get('/events');
+      setEvents(response.data);
+    } catch (error: any) {
       console.error('Error fetching events:', error);
+      if (error.response?.status === 401) {
+        toast.error('Authentication failed. Please log in again.');
+        // Optionally redirect: window.location.href = '/login';
+      } else if (error.response?.status >= 500) {
+        toast.error('Server error. Please try again later.');
+      } else {
+        toast.error('Failed to load events. Please refresh.');
+      }
     } finally {
       setLoading(false);
     }
@@ -63,40 +69,30 @@ export default function EventManagementPage() {
   }, []);
 
   const handleStatusChange = async (id: number, newStatus: Event['status']) => {
+    const loadingToast = toast.loading('Updating status...');
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE}/events/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (response.ok) {
-        fetchEvents(); // Refresh list
-      } else {
-        console.error('Failed to update status:', response.statusText);
-      }
-    } catch (error) {
+      const response = await api.put(`/events/${id}`, { status: newStatus });
+      toast.success('Status updated successfully!');
+      fetchEvents(); // Refresh list
+    } catch (error: any) {
       console.error('Error updating status:', error);
+      toast.error('Failed to update status. Please try again.');
+    } finally {
+      toast.dismiss(loadingToast);
     }
   };
 
   const handleDelete = async (id: number) => {
+    const loadingToast = toast.loading('Deleting event...');
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE}/events/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (response.ok) {
-        fetchEvents(); // Refresh list
-      } else {
-        console.error('Failed to delete event:', response.statusText);
-      }
-    } catch (error) {
+      await api.delete(`/events/${id}`);
+      toast.success('Event deleted successfully!');
+      fetchEvents(); // Refresh list
+    } catch (error: any) {
       console.error('Error deleting event:', error);
+      toast.error('Failed to delete event. Please try again.');
+    } finally {
+      toast.dismiss(loadingToast);
     }
   };
 
@@ -105,8 +101,9 @@ export default function EventManagementPage() {
     setIsEditModalOpen(true);
   };
 
-  const handleAdd = () => {
-    setIsAddModalOpen(true);
+  const handleRefresh = () => {
+    setLoading(true);
+    fetchEvents();
   };
 
   if (loading) {
@@ -122,25 +119,24 @@ export default function EventManagementPage() {
       className="min-h-screen flex bg-cover bg-center"
       style={{ backgroundImage: `url(${dashboardBg})` }}
     >
+      <Toaster position="top-right" /> {/* For toast notifications */}
       <div className="flex-1 bg-black/40 backdrop-blur-sm min-h-screen overflow-y-auto">
         <div className="max-w-6xl mx-auto px-6 py-10">
-          {/* Header */}
-          <motion.h1
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-4xl font-serif font-bold text-[#f8f4ef] mb-8 drop-shadow-md"
-          >
-            Event Management
-          </motion.h1>
-
-          {/* Add Event Button */}
-          <div className="mb-6">
-            <Button
-              onClick={handleAdd}
-              className="bg-[#d4b68a] hover:bg-[#c8a67a] text-[#2e2e2e] px-6 py-2 rounded-lg font-semibold flex items-center gap-2"
+          {/* Header with Refresh Button */}
+          <div className="flex justify-between items-center mb-8">
+            <motion.h1
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-4xl font-serif font-bold text-[#f8f4ef] drop-shadow-md"
             >
-              <Plus size={16} />
-              Add Event
+              Event Management
+            </motion.h1>
+            <Button
+              onClick={handleRefresh}
+              className="bg-[#d4b68a] hover:bg-[#c8a67a] text-[#2e2e2e] px-4 py-2 rounded-lg font-semibold flex items-center gap-2"
+            >
+              <RefreshCw size={16} />
+              Refresh
             </Button>
           </div>
 
@@ -239,7 +235,7 @@ export default function EventManagementPage() {
                           onClick={() => {
                             const link = `${window.location.origin}/rsvp/${event.id}`;
                             navigator.clipboard.writeText(link);
-                            alert('RSVP link copied to clipboard!');
+                            toast.success('RSVP link copied to clipboard!');
                           }}
                         >
                           Copy RSVP Link
@@ -254,63 +250,33 @@ export default function EventManagementPage() {
         </div>
       </div>
 
-      {/* Add Event Modal */}
-      {isAddModalOpen && <EventFormModal onClose={() => setIsAddModalOpen(false)} onSubmit={async (data) => {
-        try {
-          const token = localStorage.getItem('token');
-          const response = await fetch(`${API_BASE}/events`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify(data),
-          });
-          if (response.ok) {
-            setIsAddModalOpen(false);
-            fetchEvents(); // Refresh list
-          } else {
-            console.error('Failed to add event:', response.statusText);
-          }
-        } catch (error) {
-          console.error('Error adding event:', error);
-        }
-      }} />}
-
       {/* Edit Event Modal */}
       {isEditModalOpen && editingEvent && <EventFormModal event={editingEvent} onClose={() => {
         setIsEditModalOpen(false);
         setEditingEvent(null);
       }} onSubmit={async (data) => {
+        const loadingToast = toast.loading('Updating event...');
         try {
-          const token = localStorage.getItem('token');
-          const response = await fetch(`${API_BASE}/events/${editingEvent.id}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify(data),
-          });
-          if (response.ok) {
-            setIsEditModalOpen(false);
-            setEditingEvent(null);
-            fetchEvents(); // Refresh list
-          } else {
-            console.error('Failed to update event:', response.statusText);
-          }
-        } catch (error) {
+          await api.put(`/events/${editingEvent.id}`, data);
+          toast.success('Event updated successfully!');
+          setIsEditModalOpen(false);
+          setEditingEvent(null);
+          fetchEvents(); // Refresh list
+        } catch (error: any) {
           console.error('Error updating event:', error);
+          toast.error('Failed to update event. Please try again.');
+        } finally {
+          toast.dismiss(loadingToast);
         }
       }} />}
     </div>
   );
 }
 
-// Reusable Modal Component for Add/Edit
-function EventFormModal({ event, onClose, onSubmit }: { event?: Event; onClose: () => void; onSubmit: (data: { title: string; start_at: string; location: string }) => void }) {
+// Reusable Modal Component for Edit
+function EventFormModal({ event, onClose, onSubmit }: { event: Event; onClose: () => void; onSubmit: (data: { title: string; start_at: string; location: string }) => void }) {
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
-    defaultValues: event ? { title: event.title, start_at: event.start_at.split('T')[0], location: event.location } : { title: '', start_at: '', location: '' }
+    defaultValues: { title: event.title, start_at: event.start_at.split('T')[0], location: event.location }
   });
 
   const onFormSubmit = (data: { title: string; start_at: string; location: string }) => {
@@ -322,7 +288,7 @@ function EventFormModal({ event, onClose, onSubmit }: { event?: Event; onClose: 
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       <Card className="bg-[#f1dfc6]/95 border border-[#c8b08b]/50 rounded-2xl shadow-xl max-w-md w-full mx-4">
         <CardContent className="p-6">
-          <h2 className="text-2xl font-bold text-[#2e2e2e] mb-4">{event ? 'Edit Event' : 'Add New Event'}</h2>
+          <h2 className="text-2xl font-bold text-[#2e2e2e] mb-4">Edit Event</h2>
           <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[#2e2e2e] mb-2">Event Title *</label>
@@ -357,7 +323,7 @@ function EventFormModal({ event, onClose, onSubmit }: { event?: Event; onClose: 
             </div>
             <div className="flex gap-3">
               <Button type="button" onClick={onClose} variant="outline" className="flex-1">Cancel</Button>
-              <Button type="submit" className="flex-1 bg-[#d4b68a] hover:bg-[#c8a67a] text-[#2e2e2e]">{event ? 'Update' : 'Add'}</Button>
+              <Button type="submit" className="flex-1 bg-[#d4b68a] hover:bg-[#c8a67a] text-[#2e2e2e]">Update</Button>
             </div>
           </form>
         </CardContent>

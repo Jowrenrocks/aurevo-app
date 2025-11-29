@@ -3,7 +3,6 @@ import { Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
 import { TooltipProvider } from "./components/ui/tooltip";
-
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // Public pages
@@ -24,8 +23,6 @@ import ProfilePage from "./pages/users/ProfilePage";
 import AdminLayout from "./components/AdminLayout";
 import AdminDashboardPage from "./pages/admin/DashboardPage";
 import ViewEventsPage from "./pages/admin/ViewEventsPage";
-import PendingPaymentsPage from "./pages/admin/PendingPaymentsPage";
-import EventApprovalPage from "./pages/admin/EventApprovalPage";
 
 const queryClient = new QueryClient();
 
@@ -93,10 +90,8 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route path="/admin/approvals" element={<EventApprovalPage />} />
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
             <Route path="/admin/events" element={<ViewEventsPage />} />
-            <Route path="/admin/payments" element={<PendingPaymentsPage />} />
           </Route>
 
           {/* Fallback */}
