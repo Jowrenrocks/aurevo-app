@@ -3,12 +3,16 @@ import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Calendar,
-  DollarSign,
   LogOut,
   Menu,
   User,
   Bell,
-  CheckCircle,
+  Plus,
+  Users,
+  BarChart,
+  Settings,
+  HelpCircle,
+  ChevronDown,
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -17,6 +21,7 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ setIsLoggedIn }: AdminLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -30,8 +35,19 @@ export default function AdminLayout({ setIsLoggedIn }: AdminLayoutProps) {
 
   const navItems = [
     { name: "Dashboard", path: "/admin/dashboard", icon: <LayoutDashboard size={20} /> },
-    { name: "View Events", path: "/admin/events", icon: <Calendar size={20} /> },
-    
+    {
+      name: "Events",
+      icon: <Calendar size={20} />,
+      subItems: [
+        { name: "View Events", path: "/admin/events" },
+        { name: "Create Event", path: "/admin/create-event" },
+      ]
+    },
+    { name: "RSVPs / Attendees", path: "/admin/rsvps", icon: <Users size={20} /> },
+    { name: "Notifications", path: "/admin/notifications", icon: <Bell size={20} /> },
+    { name: "Reports", path: "/admin/reports", icon: <BarChart size={20} /> },
+    { name: "Account Settings", path: "/admin/settings", icon: <Settings size={20} /> },
+    { name: "Help / Contact", path: "/admin/help", icon: <HelpCircle size={20} /> },
   ];
 
   return (
@@ -60,21 +76,77 @@ export default function AdminLayout({ setIsLoggedIn }: AdminLayoutProps) {
 
         {/* Nav Items */}
         <nav className="flex-1 space-y-3">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+          {navItems.map((item, index) => {
+            const hasSubItems = item.subItems && item.subItems.length > 0;
+            const isExpanded = expandedItems.includes(item.name);
+            const isActive = hasSubItems
+              ? item.subItems?.some(sub => location.pathname === sub.path)
+              : location.pathname === item.path;
+
             return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-200 ${
-                  isActive
-                    ? "bg-[#a18665] text-white"
-                    : "text-gray-300 hover:bg-[#a18665]/60 hover:text-white"
-                }`}
-              >
-                {item.icon}
-                {!collapsed && <span>{item.name}</span>}
-              </Link>
+              <div key={item.name || index}>
+                {hasSubItems ? (
+                  <button
+                    onClick={() => {
+                      setExpandedItems(prev =>
+                        prev.includes(item.name)
+                          ? prev.filter(name => name !== item.name)
+                          : [...prev, item.name]
+                      );
+                    }}
+                    className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-200 w-full text-left ${
+                      isActive
+                        ? "bg-[#a18665] text-white"
+                        : "text-gray-300 hover:bg-[#a18665]/60 hover:text-white"
+                    }`}
+                  >
+                    {item.icon}
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1">{item.name}</span>
+                        <ChevronDown
+                          size={16}
+                          className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                        />
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <Link
+                    to={item.path!}
+                    className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-200 ${
+                      isActive
+                        ? "bg-[#a18665] text-white"
+                        : "text-gray-300 hover:bg-[#a18665]/60 hover:text-white"
+                    }`}
+                  >
+                    {item.icon}
+                    {!collapsed && <span>{item.name}</span>}
+                  </Link>
+                )}
+
+                {/* Sub Items */}
+                {hasSubItems && isExpanded && !collapsed && (
+                  <div className="ml-6 mt-2 space-y-2">
+                    {item.subItems!.map((subItem) => {
+                      const isSubActive = location.pathname === subItem.path;
+                      return (
+                        <Link
+                          key={subItem.path}
+                          to={subItem.path}
+                          className={`flex items-center gap-3 p-2 rounded-lg transition-all duration-200 text-sm ${
+                            isSubActive
+                              ? "bg-[#a18665] text-white"
+                              : "text-gray-400 hover:bg-[#a18665]/40 hover:text-white"
+                          }`}
+                        >
+                          <span>{subItem.name}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>

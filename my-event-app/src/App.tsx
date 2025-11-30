@@ -23,6 +23,8 @@ import ProfilePage from "./pages/users/ProfilePage";
 import AdminLayout from "./components/AdminLayout";
 import AdminDashboardPage from "./pages/admin/DashboardPage";
 import ViewEventsPage from "./pages/admin/ViewEventsPage";
+import NotificationsPage from "./pages/admin/NotificationsPage";
+import AdminRSVPPage from "./pages/admin/RSVPPage";
 
 const queryClient = new QueryClient();
 
@@ -92,6 +94,8 @@ function App() {
           >
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
             <Route path="/admin/events" element={<ViewEventsPage />} />
+            <Route path="/admin/rsvps" element={<AdminRSVPPage />} />
+            <Route path="/admin/notifications" element={<NotificationsPage />} />
           </Route>
 
           {/* Fallback */}
