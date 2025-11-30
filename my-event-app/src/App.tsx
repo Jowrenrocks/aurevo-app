@@ -18,6 +18,9 @@ import DashboardPage from "./pages/users/DashboardPage";
 import CreateEventPage from "./pages/users/CreateEventPage";
 import EventManagementPage from "./pages/users/EventManagementPage";
 import ProfilePage from "./pages/users/ProfilePage";
+import UserRSVPPage from "./pages/users/UserRSVPPage";
+import EditEventPage from "./pages/users/EditEventPage";
+import UserNotificationsPage from "./pages/users/UserNotificationsPage";
 import HelpPage from "./pages/users/HelpPage";
 
 // Admin pages + layout
@@ -83,6 +86,9 @@ function App() {
             <Route path="/user/dashboard" element={<DashboardPage />} />
             <Route path="/user/create-event" element={<CreateEventPage />} />
             <Route path="/user/events" element={<EventManagementPage />} />
+            <Route path="/user/edit-event/:eventId" element={<EditEventPage />} />
+            <Route path="/user/rsvps" element={<UserRSVPPage />} />
+            <Route path="/user/notifications" element={<UserNotificationsPage />} />
             <Route path="/user/profile" element={<ProfilePage />} />
             <Route path="/user/help" element={<HelpPage />} />
           </Route>

@@ -7,7 +7,9 @@ import {
   User,
   LogOut,
   Menu,
-  HelpCircle
+  HelpCircle,
+  Bell,
+  ChevronDown
 } from "lucide-react";
 
 interface DashboardLayoutProps {
@@ -16,6 +18,7 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ setIsLoggedIn }: DashboardLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -29,7 +32,16 @@ export default function DashboardLayout({ setIsLoggedIn }: DashboardLayoutProps)
   const navItems = [
     { name: "Dashboard", path: "/user/dashboard", icon: <LayoutDashboard size={20} /> },
     { name: "Create Event", path: "/user/create-event", icon: <CalendarPlus size={20} /> },
-    { name: "Events", path: "/user/events", icon: <List size={20} /> },
+    {
+      name: "Event List",
+      icon: <List size={20} />,
+      subItems: [
+        { name: "View Event", path: "/user/events" },
+        { name: "Edit Event", path: "/user/edit-event/1" },
+        { name: "RSVPs / Attendees", path: "/user/rsvps" },
+      ]
+    },
+    { name: "Notifications", path: "/user/notifications", icon: <Bell size={20} /> },
     { name: "Profile", path: "/user/profile", icon: <User size={20} /> },
     { name: "Help / Contact", path: "/user/help", icon: <HelpCircle size={20} /> },
   ];
@@ -60,21 +72,77 @@ export default function DashboardLayout({ setIsLoggedIn }: DashboardLayoutProps)
 
         {/* Nav Items */}
         <nav className="flex-1 space-y-3">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+          {navItems.map((item, index) => {
+            const hasSubItems = item.subItems && item.subItems.length > 0;
+            const isExpanded = expandedItems.includes(item.name);
+            const isActive = hasSubItems
+              ? item.subItems?.some(sub => location.pathname === sub.path)
+              : location.pathname === item.path;
+
             return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-200 ${
-                  isActive
-                    ? "bg-[#a18665] text-white"
-                    : "text-gray-300 hover:bg-[#a18665]/60 hover:text-white"
-                }`}
-              >
-                {item.icon}
-                {!collapsed && <span>{item.name}</span>}
-              </Link>
+              <div key={item.name || index}>
+                {hasSubItems ? (
+                  <button
+                    onClick={() => {
+                      setExpandedItems(prev =>
+                        prev.includes(item.name)
+                          ? prev.filter(name => name !== item.name)
+                          : [...prev, item.name]
+                      );
+                    }}
+                    className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-200 w-full text-left ${
+                      isActive
+                        ? "bg-[#a18665] text-white"
+                        : "text-gray-300 hover:bg-[#a18665]/60 hover:text-white"
+                    }`}
+                  >
+                    {item.icon}
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1">{item.name}</span>
+                        <ChevronDown
+                          size={16}
+                          className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                        />
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <Link
+                    to={item.path!}
+                    className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-200 ${
+                      isActive
+                        ? "bg-[#a18665] text-white"
+                        : "text-gray-300 hover:bg-[#a18665]/60 hover:text-white"
+                    }`}
+                  >
+                    {item.icon}
+                    {!collapsed && <span>{item.name}</span>}
+                  </Link>
+                )}
+
+                {/* Sub Items */}
+                {hasSubItems && isExpanded && !collapsed && (
+                  <div className="ml-6 mt-2 space-y-2">
+                    {item.subItems!.map((subItem) => {
+                      const isSubActive = location.pathname === subItem.path;
+                      return (
+                        <Link
+                          key={subItem.path}
+                          to={subItem.path}
+                          className={`flex items-center gap-3 p-2 rounded-lg transition-all duration-200 text-sm ${
+                            isSubActive
+                              ? "bg-[#a18665] text-white"
+                              : "text-gray-400 hover:bg-[#a18665]/40 hover:text-white"
+                          }`}
+                        >
+                          <span>{subItem.name}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>
