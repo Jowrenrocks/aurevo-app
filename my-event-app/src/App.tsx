@@ -18,13 +18,17 @@ import DashboardPage from "./pages/users/DashboardPage";
 import CreateEventPage from "./pages/users/CreateEventPage";
 import EventManagementPage from "./pages/users/EventManagementPage";
 import ProfilePage from "./pages/users/ProfilePage";
+import HelpPage from "./pages/users/HelpPage";
 
 // Admin pages + layout
 import AdminLayout from "./components/AdminLayout";
 import AdminDashboardPage from "./pages/admin/DashboardPage";
 import ViewEventsPage from "./pages/admin/ViewEventsPage";
-import NotificationsPage from "./pages/admin/NotificationsPage";
 import AdminRSVPPage from "./pages/admin/RSVPPage";
+import NotificationsPage from "./pages/admin/NotificationsPage";
+import ReportsPage from "./pages/admin/ReportsPage";
+import SettingsPage from "./pages/admin/SettingsPage";
+
 
 const queryClient = new QueryClient();
 
@@ -56,8 +60,6 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-
-        {/* ✅ Added EXACTLY as you requested */}
         <Toaster position="top-right" />
 
         <Routes>
@@ -82,9 +84,10 @@ function App() {
             <Route path="/user/create-event" element={<CreateEventPage />} />
             <Route path="/user/events" element={<EventManagementPage />} />
             <Route path="/user/profile" element={<ProfilePage />} />
+            <Route path="/user/help" element={<HelpPage />} />
           </Route>
 
-          {/* Admin Routes */}
+          {/* Admin Routes - Updated with new pages */}
           <Route
             element={
               <ProtectedRoute requiredRole="admin">
@@ -93,9 +96,12 @@ function App() {
             }
           >
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-            <Route path="/admin/events" element={<ViewEventsPage />} />
+            <Route path="/admin/view-events" element={<ViewEventsPage />} />
             <Route path="/admin/rsvps" element={<AdminRSVPPage />} />
             <Route path="/admin/notifications" element={<NotificationsPage />} />
+            <Route path="/admin/reports" element={<ReportsPage />} />
+            <Route path="/admin/settings" element={<SettingsPage />} />
+            
           </Route>
 
           {/* Fallback */}

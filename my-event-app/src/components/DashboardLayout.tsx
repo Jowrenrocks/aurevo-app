@@ -7,6 +7,7 @@ import {
   User,
   LogOut,
   Menu,
+  HelpCircle
 } from "lucide-react";
 
 interface DashboardLayoutProps {
@@ -30,6 +31,7 @@ export default function DashboardLayout({ setIsLoggedIn }: DashboardLayoutProps)
     { name: "Create Event", path: "/user/create-event", icon: <CalendarPlus size={20} /> },
     { name: "Events", path: "/user/events", icon: <List size={20} /> },
     { name: "Profile", path: "/user/profile", icon: <User size={20} /> },
+    { name: "Help / Contact", path: "/user/help", icon: <HelpCircle size={20} /> },
   ];
 
   return (

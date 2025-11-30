@@ -11,7 +11,6 @@ import {
   Users,
   BarChart,
   Settings,
-  HelpCircle,
   ChevronDown,
 } from "lucide-react";
 
@@ -47,7 +46,6 @@ export default function AdminLayout({ setIsLoggedIn }: AdminLayoutProps) {
     { name: "Notifications", path: "/admin/notifications", icon: <Bell size={20} /> },
     { name: "Reports", path: "/admin/reports", icon: <BarChart size={20} /> },
     { name: "Account Settings", path: "/admin/settings", icon: <Settings size={20} /> },
-    { name: "Help / Contact", path: "/admin/help", icon: <HelpCircle size={20} /> },
   ];
 
   return (
