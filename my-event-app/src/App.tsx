@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
 import { TooltipProvider } from "./components/ui/tooltip";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { initAuth } from "./services/auth";
 
 // Public pages
 import Home from "./pages/Home";
@@ -43,6 +44,7 @@ function App() {
     const role = localStorage.getItem("role");
 
     if (token) {
+      initAuth(); // ✅ Initialize auth token on app start
       setIsLoggedIn(true);
     }
 

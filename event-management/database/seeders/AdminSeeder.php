@@ -24,5 +24,15 @@ class AdminSeeder extends Seeder
                 'role_id' => $adminRole->id,
             ]
         );
+
+        // Create default user for testing event creation
+        User::updateOrCreate(
+            ['email' => 'user@example.com'],
+            [
+                'full_name' => 'Test User',
+                'password' => Hash::make('password123'),
+                'role_id' => $userRole->id,
+            ]
+        );  
     }
 }

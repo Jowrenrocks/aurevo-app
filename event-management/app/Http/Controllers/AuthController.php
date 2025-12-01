@@ -23,7 +23,7 @@ class AuthController extends Controller
         'role_id' => 2 // default: user
     ]);
 
-    $token = JWTAuth::fromUser($user);
+    $token = $user->createToken('auth_token')->plainTextToken;
     $user->load('role');
 
     return response()->json([
@@ -41,11 +41,12 @@ class AuthController extends Controller
     {
         $credentials = $req->only('email', 'password');
 
-        if (!$token = auth()->attempt($credentials)) {
+        if (!auth()->attempt($credentials)) {
             return response()->json(['error' => 'Invalid credentials'], 401);
         }
 
-        $user = auth()->user()->load('role'); // ✅ load role relationship
+        $user = auth()->user()->load('role');
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'token' => $token,
@@ -53,19 +54,19 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'full_name' => $user->full_name,
                 'email' => $user->email,
-                'role' => $user->role->name ?? 'user' // ✅ Send role name
+                'role' => $user->role->name ?? 'user'
             ]
         ]);
     }
-    public function me()
+    public function me(Request $request)
     {
-        $user = auth()->user()->load('role');
+        $user = $request->user()->load('role');
         return response()->json($user);
     }
 
-    public function logout()
+    public function logout(Request $request)
     {
-        auth()->logout();
+        $request->user()->currentAccessToken()->delete();
         return response()->json(['message' => 'Logged out']);
     }
 }
