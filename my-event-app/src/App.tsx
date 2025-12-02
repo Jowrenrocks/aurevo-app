@@ -18,6 +18,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import DashboardPage from "./pages/users/DashboardPage";
 import CreateEventPage from "./pages/users/CreateEventPage";
 import EventManagementPage from "./pages/users/EventManagementPage";
+import ViewEventsPage from "./pages/users/ViewEventsPage";
 import ProfilePage from "./pages/users/ProfilePage";
 import UserRSVPPage from "./pages/users/UserRSVPPage";
 import EditEventPage from "./pages/users/EditEventPage";
@@ -27,7 +28,7 @@ import HelpPage from "./pages/users/HelpPage";
 // Admin pages + layout
 import AdminLayout from "./components/AdminLayout";
 import AdminDashboardPage from "./pages/admin/DashboardPage";
-import ViewEventsPage from "./pages/admin/ViewEventsPage";
+import AdminViewEventsPage from "./pages/admin/ViewEventsPage";
 import AdminRSVPPage from "./pages/admin/RSVPPage";
 import NotificationsPage from "./pages/admin/NotificationsPage";
 import ReportsPage from "./pages/admin/ReportsPage";
@@ -88,6 +89,7 @@ function App() {
             <Route path="/user/dashboard" element={<DashboardPage />} />
             <Route path="/user/create-event" element={<CreateEventPage />} />
             <Route path="/user/events" element={<EventManagementPage />} />
+            <Route path="/user/view-events" element={<ViewEventsPage />} />
             <Route path="/user/edit-event/:eventId" element={<EditEventPage />} />
             <Route path="/user/rsvps" element={<UserRSVPPage />} />
             <Route path="/user/notifications" element={<UserNotificationsPage />} />
@@ -104,7 +106,7 @@ function App() {
             }
           >
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-            <Route path="/admin/view-events" element={<ViewEventsPage />} />
+            <Route path="/admin/view-events" element={<AdminViewEventsPage />} />
             <Route path="/admin/rsvps" element={<AdminRSVPPage />} />
             <Route path="/admin/notifications" element={<NotificationsPage />} />
             <Route path="/admin/reports" element={<ReportsPage />} />

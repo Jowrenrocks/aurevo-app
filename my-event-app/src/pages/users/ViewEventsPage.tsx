@@ -14,7 +14,7 @@ interface Event {
     full_name: string;
   };
   rsvps_count: number;
-  status?: string;
+  status: string;
 }
 
 export default function ViewEventsPage() {
@@ -73,12 +73,28 @@ export default function ViewEventsPage() {
     return start;
   };
 
+  const getStatusBadge = (status: string) => {
+    const statusColors = {
+      draft: "bg-gray-100 text-gray-800",
+      pending: "bg-yellow-100 text-yellow-800",
+      approved: "bg-green-100 text-green-800",
+      declined: "bg-red-100 text-red-800",
+      concluded: "bg-blue-100 text-blue-800"
+    };
+
+    return (
+      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusColors[status as keyof typeof statusColors] || statusColors.draft}`}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </span>
+    );
+  };
+
   if (loading) {
     return (
       <div className="p-8 bg-[url('/src/assets/dashboard-bg.png')] bg-cover min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#d4b885] mx-auto"></div>
-          <p className="mt-4 text-[#3b2a13]">Loading events...</p>
+          <p className="mt-4 text-[#3b2a13]">Loading your events...</p>
         </div>
       </div>
     );
@@ -106,8 +122,8 @@ export default function ViewEventsPage() {
     <div className="p-8 bg-[url('/src/assets/dashboard-bg.png')] bg-cover min-h-screen">
       {/* Header Section */}
       <div className="bg-[#d4b885] p-6 rounded-2xl mb-6 shadow-lg">
-        <h2 className="text-3xl font-bold text-[#3b2a13]">VIEW EVENTS</h2>
-        <p className="text-sm text-[#3b2a13] mt-1">Browse all scheduled events</p>
+        <h2 className="text-3xl font-bold text-[#3b2a13]">MY EVENTS</h2>
+        <p className="text-sm text-[#3b2a13] mt-1">View all your scheduled events</p>
       </div>
 
       {/* Tabs */}
@@ -155,12 +171,9 @@ export default function ViewEventsPage() {
                           {event.title}
                         </h3>
                         <p className="text-gray-600">
-                          Organized by <span className="font-semibold">{event.creator?.full_name || 'Unknown'}</span>
+                          Status: {getStatusBadge(event.status)}
                         </p>
                       </div>
-                      <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-semibold">
-                        Event
-                      </span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
@@ -181,6 +194,12 @@ export default function ViewEventsPage() {
                         <span>{event.rsvps_count} RSVPs</span>
                       </div>
                     </div>
+
+                    {event.description && (
+                      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                        <p className="text-gray-700 text-sm">{event.description}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -193,9 +212,15 @@ export default function ViewEventsPage() {
               </h3>
               <p className="text-gray-500">
                 {tab === "upcoming"
-                  ? "There are no upcoming events scheduled at the moment."
-                  : "No events have been completed yet."}
+                  ? "You don't have any upcoming events scheduled."
+                  : "You don't have any completed events yet."}
               </p>
+              <button
+                onClick={() => window.location.href = '/user/create-event'}
+                className="mt-4 px-6 py-2 bg-[#d4b885] text-[#3b2a13] rounded-lg font-semibold hover:bg-[#c4b184] transition-colors"
+              >
+                Create Your First Event
+              </button>
             </div>
           )}
         </div>
