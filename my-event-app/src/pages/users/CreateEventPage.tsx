@@ -3,6 +3,7 @@ import { Calendar, Users, MapPin, DollarSign, Clock, FileText, CheckCircle, Arro
 import { useNavigate } from 'react-router-dom'; // For redirect after success
 import toast, { Toaster } from 'react-hot-toast'; // Added for notifications
 import dashboardBg from "../../assets/dashboard-bg.png";
+import api from '../../utils/api'; // Import the API utility
 
 const STEPS = [
   { id: 1, title: 'Basic Info', icon: FileText },
@@ -461,28 +462,39 @@ export default function EventCreationWizard() {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validateStep()) {
-      console.log('Event Data:', formData);
-      setSubmitted(true);
-      
-      setTimeout(() => {
-        setSubmitted(false);
-        setCurrentStep(1);
-        setFormData({
-          eventType: '',
-          eventName: '',
-          hostName: '',
-          contactNumber: '',
-          venue: null,
-          eventDate: '',
-          startTime: '',
-          endTime: '',
-          expectedGuests: '',
-          notes: '',
-          services: []
-        });
-      }, 3000);
+      try {
+        // Transform form data to match API expectations
+        const eventData = {
+          title: formData.eventName,
+          description: formData.notes || null,
+          start_at: `${formData.eventDate}T${formData.startTime}:00`,
+          end_at: formData.endTime ? `${formData.eventDate}T${formData.endTime}:00` : null,
+          location: formData.venue?.name || null,
+          expected_guests: parseInt(formData.expectedGuests),
+          event_type: formData.eventType,
+          host_name: formData.hostName,
+          contact_number: formData.contactNumber,
+          services: formData.services || []
+        };
+
+        console.log('Submitting event data:', eventData);
+
+        // Make API call to create event
+        await api.post('/events', eventData);
+
+        setSubmitted(true);
+
+        // Redirect to view events page after success
+        setTimeout(() => {
+          navigate('/user/view-events');
+        }, 2000);
+
+      } catch (error) {
+        console.error('Error creating event:', error);
+        toast.error('Failed to create event. Please try again.');
+      }
     }
   };
 
@@ -495,7 +507,7 @@ export default function EventCreationWizard() {
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Event Created Successfully!</h2>
           <p className="text-gray-600 mb-4">
-            Your event has been submitted for review. We'll contact you shortly.
+            Your event has been created. View at your View Events to clarify.
           </p>
           <div className="inline-block px-6 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
             Redirecting...

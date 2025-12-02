@@ -37,7 +37,7 @@ export default function DashboardLayout({ setIsLoggedIn }: DashboardLayoutProps)
       icon: <List size={20} />,
       subItems: [
         { name: "View My Events", path: "/user/view-events" },
-        { name: "Manage Events", path: "/user/events" },
+        { name: "Edit Event", path: "/user/edit-event/1" },
         { name: "RSVPs / Attendees", path: "/user/rsvps" },
       ]
     },
