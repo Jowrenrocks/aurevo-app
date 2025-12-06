@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Users, UserCheck, UserX, User, Download, Search, Filter } from "lucide-react";
-
+import api from '../../utils/api';
 interface RSVP {
   id: number;
   eventId: number;
@@ -23,73 +23,22 @@ export default function UserRSVPPage() {
   const [eventFilter, setEventFilter] = useState<string>("all");
 
   useEffect(() => {
-    // Mock data - replace with API calls
-    const mockRsvps: RSVP[] = [
-      {
-        id: 1,
-        eventId: 1,
-        eventTitle: "Corporate Gala 2025",
-        attendeeName: "John Smith",
-        email: "john.smith@company.com",
-        phone: "+63 912 345 6789",
-        status: "yes" as const,
-        guests: 2,
-        specialRequests: "Vegetarian meal for one guest",
-        rsvpDate: "2025-11-10T14:30:00Z"
-      },
-      {
-        id: 2,
-        eventId: 1,
-        eventTitle: "Corporate Gala 2025",
-        attendeeName: "Maria Garcia",
-        email: "maria.garcia@email.com",
-        phone: "+63 923 456 7890",
-        status: "yes" as const,
-        guests: 1,
-        specialRequests: "",
-        rsvpDate: "2025-11-09T16:45:00Z"
-      },
-      {
-        id: 3,
-        eventId: 2,
-        eventTitle: "Wedding - Smith & Jones",
-        attendeeName: "Robert Johnson",
-        email: "robert.j@email.com",
-        phone: "+63 934 567 8901",
-        status: "maybe" as const,
-        guests: 3,
-        specialRequests: "Need high chair for toddler",
-        rsvpDate: "2025-11-08T11:20:00Z"
-      },
-      {
-        id: 4,
-        eventId: 3,
-        eventTitle: "Birthday Celebration",
-        attendeeName: "Sarah Wilson",
-        email: "sarah.w@email.com",
-        phone: "+63 945 678 9012",
-        status: "no" as const,
-        guests: 1,
-        specialRequests: "",
-        rsvpDate: "2025-11-07T09:15:00Z"
-      },
-      {
-        id: 5,
-        eventId: 2,
-        eventTitle: "Wedding - Smith & Jones",
-        attendeeName: "David Brown",
-        email: "david.brown@email.com",
-        phone: "+63 956 789 0123",
-        status: "yes" as const,
-        guests: 2,
-        specialRequests: "Allergic to nuts",
-        rsvpDate: "2025-11-06T13:40:00Z"
+    const fetchRsvps = async () => {
+      try {
+        const response = await api.get('/rsvps');
+        setRsvps(response.data);
+        setFilteredRsvps(response.data);
+      } catch (error) {
+        console.error('Error fetching RSVPs:', error);
+        // Keep empty array on error
+        setRsvps([]);
+        setFilteredRsvps([]);
+      } finally {
+        setLoading(false);
       }
-    ];
+    };
 
-    setRsvps(mockRsvps);
-    setFilteredRsvps(mockRsvps);
-    setLoading(false);
+    fetchRsvps();
   }, []);
 
   useEffect(() => {

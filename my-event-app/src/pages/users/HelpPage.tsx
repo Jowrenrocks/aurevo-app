@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { HelpCircle, MessageCircle, Mail, Phone, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import api from '../../utils/api';
 
 const faqs = [
   {
@@ -51,10 +52,16 @@ export default function HelpPage() {
     faq.answer.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSubmitContact = (e: React.FormEvent) => {
+  const handleSubmitContact = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Your message has been sent! We\'ll get back to you soon. (Frontend Demo)');
-    setContactForm({ name: '', email: '', subject: '', message: '' });
+    try {
+      await api.post('/support/contact', contactForm);
+      alert('Your message has been sent! We\'ll get back to you soon.');
+      setContactForm({ name: '', email: '', subject: '', message: '' });
+    } catch (error) {
+      console.error('Error sending contact form:', error);
+      alert('Failed to send message. Please try again.');
+    }
   };
 
   return (

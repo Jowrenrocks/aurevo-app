@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Bell, Mail, MessageSquare, Smartphone, Send, Plus, CheckCircle, Clock, FileText, Eye } from "lucide-react";
+import api from '../../utils/api';
 
 interface Notification {
   id: number;
@@ -118,8 +119,17 @@ export default function UserNotificationsPage() {
     );
   };
 
-  const handleSendReminder = () => {
-    alert("Reminder sent to all attendees!");
+  const handleSendReminder = async () => {
+    try {
+      await api.post('/notifications/send-reminder', {
+        message: "Reminder: Don't forget about your upcoming event!",
+        type: "email"
+      });
+      alert("Reminder sent to all attendees!");
+    } catch (error) {
+      console.error('Error sending reminder:', error);
+      alert("Failed to send reminder. Please try again.");
+    }
   };
 
   const stats = {

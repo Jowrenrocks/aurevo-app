@@ -1,13 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import dashboardBg from "../../assets/dashboard-bg.png";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
-import { 
-  User, Mail, Calendar, Edit3, Save, X, 
-  Phone, MapPin, Building, Award, 
+import {
+  User, Mail, Calendar, Edit3, Save, X,
+  Phone, MapPin, Building, Award,
   Camera, Shield, Bell, Lock
 } from "lucide-react";
+import api from '../../utils/api';
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications'>('profile');
@@ -33,14 +35,39 @@ export default function ProfilePage() {
 
   const [editMode, setEditMode] = useState(false);
   const [tempData, setTempData] = useState(profile);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const response = await api.get('/profile');
+      setProfile(response.data);
+      setTempData(response.data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      toast.error('Failed to load profile data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setTempData({ ...tempData, [e.target.name]: e.target.value });
   };
 
-  const handleSave = () => {
-    setProfile(tempData);
-    setEditMode(false);
+  const handleSave = async () => {
+    try {
+      await api.put('/profile', tempData);
+      setProfile(tempData);
+      setEditMode(false);
+      toast.success('Profile updated successfully');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('Failed to update profile');
+    }
   };
 
   const handleCancel = () => {
@@ -497,6 +524,7 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+      <Toaster position="top-right" />
     </div>
   );
 }

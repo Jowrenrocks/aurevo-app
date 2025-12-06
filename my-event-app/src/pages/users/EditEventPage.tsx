@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Save, Trash2, Copy, ArrowLeft, Calendar, MapPin, Users, Clock } from "lucide-react";
+import api from '../../utils/api';
 
 interface Event {
   id: number;
@@ -42,32 +43,46 @@ export default function EditEventPage() {
   });
 
   useEffect(() => {
-    // Mock data - replace with API call
-    const mockEvent: Event = {
-      id: parseInt(eventId || "1"),
-      title: "Corporate Gala 2025",
-      description: "Annual corporate gala featuring networking opportunities, fine dining, and entertainment.",
-      date: "2025-12-15",
-      time: "19:00",
-      location: "Grand Ballroom, Metro Manila Hotel",
-      maxAttendees: 200,
-      category: "Corporate",
-      status: "published",
-      image: "/src/assets/theme1.png"
+    const loadEvent = async () => {
+      try {
+        const response = await api.get(`/events/${eventId}`);
+        const eventData = response.data;
+
+        // Transform API data to match component format
+        const transformedEvent: Event = {
+          id: eventData.id,
+          title: eventData.title,
+          description: eventData.description,
+          date: eventData.start_at.split('T')[0], // Extract date part
+          time: eventData.start_at.split('T')[1].substring(0, 5), // Extract time part (HH:MM)
+          location: eventData.location || '',
+          maxAttendees: 0, // Not in API, set to 0
+          category: '', // Not in API, set to empty
+          status: 'published' // Not in API, assume published
+        };
+
+        setEvent(transformedEvent);
+        setFormData({
+          title: transformedEvent.title,
+          description: transformedEvent.description,
+          date: transformedEvent.date,
+          time: transformedEvent.time,
+          location: transformedEvent.location,
+          maxAttendees: transformedEvent.maxAttendees,
+          category: transformedEvent.category,
+          status: transformedEvent.status
+        });
+      } catch (error) {
+        console.error('Error loading event:', error);
+        // Handle error - could show error message
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setEvent(mockEvent);
-    setFormData({
-      title: mockEvent.title,
-      description: mockEvent.description,
-      date: mockEvent.date,
-      time: mockEvent.time,
-      location: mockEvent.location,
-      maxAttendees: mockEvent.maxAttendees,
-      category: mockEvent.category,
-      status: mockEvent.status
-    });
-    setLoading(false);
+    if (eventId) {
+      loadEvent();
+    }
   }, [eventId]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -80,25 +95,62 @@ export default function EditEventPage() {
 
   const handleSave = async () => {
     setSaving(true);
-    // Mock save - replace with API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    alert("Event updated successfully!");
-    setSaving(false);
-    navigate("/user/events");
-  };
+    try {
+      // Combine date and time for API
+      const startAt = `${formData.date}T${formData.time}:00`;
 
-  const handleDelete = () => {
-    if (window.confirm("Are you sure you want to delete this event? This action cannot be undone.")) {
-      // Mock delete - replace with API call
-      alert("Event deleted successfully!");
+      const updateData = {
+        title: formData.title,
+        description: formData.description,
+        start_at: startAt,
+        location: formData.location,
+        // Add other fields if API supports them
+      };
+
+      await api.put(`/events/${eventId}`, updateData);
+      alert("Event updated successfully!");
       navigate("/user/events");
+    } catch (error) {
+      console.error('Error updating event:', error);
+      alert("Failed to update event. Please try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleDuplicate = () => {
-    // Mock duplicate - replace with API call
-    alert("Event duplicated successfully!");
-    navigate("/user/create-event");
+  const handleDelete = async () => {
+    if (window.confirm("Are you sure you want to delete this event? This action cannot be undone.")) {
+      try {
+        await api.delete(`/events/${eventId}`);
+        alert("Event deleted successfully!");
+        navigate("/user/events");
+      } catch (error) {
+        console.error('Error deleting event:', error);
+        alert("Failed to delete event. Please try again.");
+      }
+    }
+  };
+
+  const handleDuplicate = async () => {
+    try {
+      // First get the current event data
+      const response = await api.get(`/events/${eventId}`);
+      const eventData = response.data;
+
+      // Create a duplicate with modified title
+      const duplicateData = {
+        ...eventData,
+        title: `${eventData.title} (Copy)`,
+        start_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // Set to 1 week from now
+      };
+
+      await api.post('/events', duplicateData);
+      alert("Event duplicated successfully!");
+      navigate("/user/events");
+    } catch (error) {
+      console.error('Error duplicating event:', error);
+      alert("Failed to duplicate event. Please try again.");
+    }
   };
 
   if (loading) {

@@ -1,32 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Users, DollarSign, TrendingUp, Bell, Search, Filter } from 'lucide-react';
 import dashboardBg from "../../assets/dashboard-bg.png";
-// Mock API service
-const eventService = {
-  getAllEvents: async () => {
-    return [
-      { id: 1, title: "Corporate Gala 2025", date: "2025-12-15", attendees: 250, status: "upcoming", revenue: 125000, type: "corporate", rsvps_count: 250 },
-      { id: 2, title: "Wedding - Smith & Jones", date: "2025-11-28", attendees: 150, status: "upcoming", revenue: 85000, type: "wedding", rsvps_count: 150 },
-      { id: 3, title: "Birthday Celebration", date: "2025-11-20", attendees: 80, status: "upcoming", revenue: 35000, type: "birthday", rsvps_count: 80 },
-      { id: 4, title: "Anniversary Party", date: "2025-10-15", attendees: 100, status: "completed", revenue: 45000, type: "anniversary", rsvps_count: 100 },
-      { id: 5, title: "Tech Conference 2025", date: "2025-12-01", attendees: 500, status: "upcoming", revenue: 250000, type: "corporate", rsvps_count: 500 }
-    ];
-  },
-  
-  getStats: async () => {
-    return {
-      totalEvents: 12,
-      upcomingEvents: 5,
-      totalRevenue: 540000,
-      totalAttendees: 1580,
-      recentActivity: [
-        { id: 1, message: "New booking: Wedding Event", time: "2 hours ago", type: "booking" },
-        { id: 2, message: "Payment received: ₱85,000", time: "5 hours ago", type: "payment" },
-        { id: 3, message: "Event completed: Birthday Bash", time: "1 day ago", type: "completion" }
-      ]
-    };
-  }
-};
+import api from '../../utils/api';
 
 interface StatCardProps {
   icon: React.ElementType;
@@ -144,34 +119,37 @@ export default function EnhancedEventDashboard() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const eventsData = await eventService.getAllEvents();
-      
+      const response = await api.get('/events');
+      const eventsData = response.data;
+
       // Transform backend data to match frontend format
-      const transformedEvents = eventsData.map((event: any) => ({
-        id: event.id,
-        title: event.title,
-        date: event.date,
-        attendees: event.rsvps_count || 0,
-        status: event.status,
-        revenue: event.revenue || 50000,
-        type: event.type || 'corporate'
-      }));
-      
+      const transformedEvents = eventsData.map((event: any) => {
+        const eventDate = new Date(event.start_at);
+        const now = new Date();
+        const status = eventDate > now ? 'upcoming' : 'completed';
+
+        return {
+          id: event.id,
+          title: event.title,
+          date: event.start_at,
+          attendees: 0, // Will be fetched separately if needed
+          status: status,
+          revenue: 0, // No revenue in API, set to 0
+          type: 'general' // No type in API, set to general
+        };
+      });
+
       setEvents(transformedEvents);
-      
+
       // Calculate stats from events
       const statsData = {
         totalEvents: transformedEvents.length,
-        upcomingEvents: transformedEvents.filter((e: any) => e.status === 'upcoming' || e.status === 'approved').length,
-        totalRevenue: transformedEvents.reduce((sum: number, e: any) => sum + e.revenue, 0),
-        totalAttendees: transformedEvents.reduce((sum: number, e: any) => sum + e.attendees, 0),
-        recentActivity: [
-          { id: 1, message: "New booking: Wedding Event", time: "2 hours ago", type: "booking" },
-          { id: 2, message: "Payment received: ₱85,000", time: "5 hours ago", type: "payment" },
-          { id: 3, message: "Event completed: Birthday Bash", time: "1 day ago", type: "completion" }
-        ]
+        upcomingEvents: transformedEvents.filter((e: any) => e.status === 'upcoming').length,
+        totalRevenue: 0, // No revenue data
+        totalAttendees: 0, // No attendees count in list, would need separate calls
+        recentActivity: [] // No activity API, leave empty for now
       };
-      
+
       setStats(statsData);
     } catch (error) {
       console.error("Error loading data:", error);
