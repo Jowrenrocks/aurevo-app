@@ -29,11 +29,12 @@ import HelpPage from "./pages/users/HelpPage";
 import AdminLayout from "./components/AdminLayout";
 import AdminDashboardPage from "./pages/admin/DashboardPage";
 import AdminViewEventsPage from "./pages/admin/ViewEventsPage";
+import AdminCreateEventPage from "./pages/admin/CreateEventPage";
+import AdminEditEventPage from "./pages/admin/EditEventPage";
 import AdminRSVPPage from "./pages/admin/RSVPPage";
 import NotificationsPage from "./pages/admin/NotificationsPage";
 import ReportsPage from "./pages/admin/ReportsPage";
 import SettingsPage from "./pages/admin/SettingsPage";
-
 
 const queryClient = new QueryClient();
 
@@ -106,12 +107,13 @@ function App() {
             }
           >
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-            <Route path="/admin/view-events" element={<AdminViewEventsPage />} />
+            <Route path="/admin/events" element={<AdminViewEventsPage />} />
+            <Route path="/admin/create-event" element={<AdminCreateEventPage />} />
+            <Route path="/admin/edit-event/:eventId" element={<AdminEditEventPage />} />
             <Route path="/admin/rsvps" element={<AdminRSVPPage />} />
             <Route path="/admin/notifications" element={<NotificationsPage />} />
             <Route path="/admin/reports" element={<ReportsPage />} />
             <Route path="/admin/settings" element={<SettingsPage />} />
-            
           </Route>
 
           {/* Fallback */}

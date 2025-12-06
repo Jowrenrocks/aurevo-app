@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
-import { Calendar, MapPin, Users, Clock } from "lucide-react";
+import { Calendar, MapPin, Users, Clock, Edit, Trash2, Copy, MoreVertical, Eye } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import toast, { Toaster } from 'react-hot-toast';
 import { fetchEvents } from "../../services/events";
+import api from '../../utils/api';
 
 interface Event {
   id: number;
