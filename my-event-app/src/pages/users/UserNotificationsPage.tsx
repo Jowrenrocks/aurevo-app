@@ -20,6 +20,15 @@ export default function UserNotificationsPage() {
   const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [showComposeModal, setShowComposeModal] = useState(false);
+  const [composeForm, setComposeForm] = useState({
+    type: "email" as "email" | "sms" | "push",
+    title: "",
+    message: "",
+    eventId: "",
+    sendToAll: true,
+    recipientEmails: ""
+  });
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     // Mock data - replace with API calls
@@ -129,6 +138,54 @@ export default function UserNotificationsPage() {
     } catch (error) {
       console.error('Error sending reminder:', error);
       alert("Failed to send reminder. Please try again.");
+    }
+  };
+
+  const handleComposeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSending(true);
+
+    try {
+      const notificationData = {
+        type: composeForm.type,
+        title: composeForm.title,
+        message: composeForm.message,
+        eventId: composeForm.eventId || null,
+        sendToAll: composeForm.sendToAll,
+        recipientEmails: composeForm.sendToAll ? null : composeForm.recipientEmails.split(',').map(email => email.trim())
+      };
+
+      await api.post('/notifications', notificationData);
+
+      // Add to notifications list
+      const newNotification: Notification = {
+        id: Date.now(), // Temporary ID
+        type: composeForm.type,
+        title: composeForm.title,
+        message: composeForm.message,
+        status: "sent",
+        recipientCount: composeForm.sendToAll ? 150 : (composeForm.recipientEmails.split(',').length || 1),
+        eventTitle: "Custom Notification",
+        sentDate: new Date().toISOString()
+      };
+
+      setNotifications(prev => [newNotification, ...prev]);
+      setShowComposeModal(false);
+      setComposeForm({
+        type: "email",
+        title: "",
+        message: "",
+        eventId: "",
+        sendToAll: true,
+        recipientEmails: ""
+      });
+
+      alert("Notification sent successfully!");
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      alert("Failed to send notification. Please try again.");
+    } finally {
+      setSending(false);
     }
   };
 
@@ -293,18 +350,153 @@ export default function UserNotificationsPage() {
         )}
       </div>
 
-      {/* Compose Modal Placeholder */}
+      {/* Compose Modal */}
       {showComposeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-2xl shadow-lg max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Compose Notification</h3>
-            <p className="text-gray-600 mb-4">This feature is coming soon!</p>
-            <button
-              onClick={() => setShowComposeModal(false)}
-              className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-            >
-              Close
-            </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900">Compose New Notification</h3>
+                <button
+                  onClick={() => setShowComposeModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleComposeSubmit} className="space-y-6">
+                {/* Notification Type */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    Notification Type <span className="text-red-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { value: "email", label: "Email", icon: Mail },
+                      { value: "sms", label: "SMS", icon: MessageSquare },
+                      { value: "push", label: "Push", icon: Smartphone }
+                    ].map(({ value, label, icon: Icon }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setComposeForm(prev => ({ ...prev, type: value as any }))}
+                        className={`p-4 border-2 rounded-lg flex flex-col items-center gap-2 transition-all ${
+                          composeForm.type === value
+                            ? "border-[#d4b885] bg-[#d4b885]/10 text-[#d4b885]"
+                            : "border-gray-200 hover:border-gray-300 text-gray-600"
+                        }`}
+                      >
+                        <Icon className="w-6 h-6" />
+                        <span className="font-medium">{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Title */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Notification Title <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={composeForm.title}
+                    onChange={(e) => setComposeForm(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Enter notification title"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#d4b885] focus:border-transparent"
+                  />
+                </div>
+
+                {/* Message */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Message <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    required
+                    value={composeForm.message}
+                    onChange={(e) => setComposeForm(prev => ({ ...prev, message: e.target.value }))}
+                    placeholder="Enter your notification message"
+                    rows={4}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#d4b885] focus:border-transparent resize-none"
+                  />
+                </div>
+
+                {/* Recipients */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    Recipients <span className="text-red-500">*</span>
+                  </label>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        id="sendToAll"
+                        name="recipients"
+                        checked={composeForm.sendToAll}
+                        onChange={() => setComposeForm(prev => ({ ...prev, sendToAll: true }))}
+                        className="w-4 h-4 text-[#d4b885] focus:ring-[#d4b885]"
+                      />
+                      <label htmlFor="sendToAll" className="text-sm text-gray-700">
+                        Send to all attendees
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        id="sendToSpecific"
+                        name="recipients"
+                        checked={!composeForm.sendToAll}
+                        onChange={() => setComposeForm(prev => ({ ...prev, sendToAll: false }))}
+                        className="w-4 h-4 text-[#d4b885] focus:ring-[#d4b885]"
+                      />
+                      <label htmlFor="sendToSpecific" className="text-sm text-gray-700">
+                        Send to specific emails
+                      </label>
+                    </div>
+                    {!composeForm.sendToAll && (
+                      <textarea
+                        value={composeForm.recipientEmails}
+                        onChange={(e) => setComposeForm(prev => ({ ...prev, recipientEmails: e.target.value }))}
+                        placeholder="Enter email addresses separated by commas"
+                        rows={3}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#d4b885] focus:border-transparent resize-none"
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowComposeModal(false)}
+                    className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={sending}
+                    className="flex-1 px-6 py-3 bg-[#d4b885] text-[#3b2a13] rounded-lg hover:bg-[#c4b184] transition-colors font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {sending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#3b2a13]"></div>
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Send Notification
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

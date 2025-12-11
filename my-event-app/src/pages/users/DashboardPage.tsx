@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Users, DollarSign, TrendingUp, Bell, Search, Filter } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Calendar, Users, DollarSign, TrendingUp, Bell, Search, Filter, RefreshCw, Plus, FileText, Eye, Edit, AlertCircle } from 'lucide-react';
 import dashboardBg from "../../assets/dashboard-bg.png";
 import api from '../../utils/api';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface StatCardProps {
   icon: React.ElementType;
@@ -105,9 +107,12 @@ function ActivityFeed({ activities }) {
 }
 
 export default function EnhancedEventDashboard() {
+  const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -116,8 +121,14 @@ export default function EnhancedEventDashboard() {
     loadData();
   }, []);
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (showRefreshIndicator = false) => {
+    if (showRefreshIndicator) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    setError(null);
+
     try {
       const response = await api.get('/events');
       const eventsData = response.data;
@@ -151,11 +162,68 @@ export default function EnhancedEventDashboard() {
       };
 
       setStats(statsData);
-    } catch (error) {
+
+      if (showRefreshIndicator) {
+        toast.success('Dashboard refreshed successfully');
+      }
+    } catch (error: any) {
       console.error("Error loading data:", error);
+      const errorMessage = error.response?.data?.message || 'Failed to load dashboard data';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = () => {
+    loadData(true);
+  };
+
+  const handleCreateEvent = () => {
+    navigate('/user/events/create');
+  };
+
+  const handleViewCalendar = () => {
+    navigate('/user/calendar');
+  };
+
+  const handleExportReports = () => {
+    // Generate CSV report
+    const csvData = events.map(event => ({
+      Title: event.title,
+      Date: new Date(event.date).toLocaleDateString(),
+      Status: event.status,
+      Attendees: event.attendees,
+      Revenue: event.revenue
+    }));
+
+    const headers = ['Title', 'Date', 'Status', 'Attendees', 'Revenue'];
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => headers.map(header => `"${row[header]}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `events-report-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success('Report exported successfully');
+  };
+
+  const handleEditEvent = (event) => {
+    navigate(`/user/events/edit/${event.id}`);
+  };
+
+  const handleViewAttendees = (event) => {
+    navigate(`/user/events/${event.id}/rsvps`);
   };
 
   const filteredEvents = events.filter(event => {
@@ -184,10 +252,37 @@ export default function EnhancedEventDashboard() {
       <div className="min-h-screen bg-black/40 backdrop-blur-sm p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-white mb-2 drop-shadow-lg">Event Dashboard</h1>
-            <p className="text-white/90 drop-shadow">Manage and monitor all your events in one place</p>
+          <div className="mb-8 flex justify-between items-start">
+            <div>
+              <h1 className="text-4xl font-bold text-white mb-2 drop-shadow-lg">Event Dashboard</h1>
+              <p className="text-white/90 drop-shadow">Manage and monitor all your events in one place</p>
+            </div>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="bg-white/20 backdrop-blur-md text-white p-3 rounded-xl hover:bg-white/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Refresh Dashboard"
+            >
+              <RefreshCw className={`w-6 h-6 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-red-800 font-medium">Error loading dashboard</p>
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+              <button
+                onClick={handleRefresh}
+                className="bg-red-100 text-red-700 px-3 py-1 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          )}
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -332,10 +427,18 @@ export default function EnhancedEventDashboard() {
                 </div>
 
                 <div className="mt-8 flex gap-3">
-                  <button className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 rounded-lg font-medium hover:from-amber-600 hover:to-orange-600 transition-all">
+                  <button
+                    onClick={() => handleEditEvent(selectedEvent)}
+                    className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 rounded-lg font-medium hover:from-amber-600 hover:to-orange-600 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Edit className="w-4 h-4" />
                     Edit Event
                   </button>
-                  <button className="flex-1 bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 transition-all">
+                  <button
+                    onClick={() => handleViewAttendees(selectedEvent)}
+                    className="flex-1 bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Eye className="w-4 h-4" />
                     View Attendees
                   </button>
                 </div>
