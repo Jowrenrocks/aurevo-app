@@ -32,6 +32,9 @@ class EventController extends Controller {
   public function attendees($id){
     $ev = Event::with('rsvps.user')->findOrFail($id);
     // optionally check permission (only event creator or admin)
-    return response()->json($ev->rsvps);
+    $attendees = $ev->rsvps->filter(function($rsvp) {
+      return $rsvp->status === 'attending' || $rsvp->response === 'yes';
+    });
+    return response()->json($attendees);
   }
 }

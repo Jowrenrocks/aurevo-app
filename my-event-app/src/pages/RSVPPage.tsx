@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { CheckCircle } from "lucide-react";
+import api from "../utils/api";
 import bg from "../assets/rsvp-bg.png";
 
 interface GuestInfo {
@@ -68,17 +69,19 @@ export default function PublicRSVPPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // TODO: Submit to API
-    // await api.post(`/events/${eventId}/rsvp`, guestInfo);
-    
-    console.log("RSVP Submitted:", guestInfo);
-    setSubmitted(true);
-    
-    // Auto-redirect after 5 seconds
-    setTimeout(() => {
-      navigate("/");
-    }, 5000);
+
+    try {
+      await api.post(`/events/${eventId}/rsvp`, guestInfo);
+      setSubmitted(true);
+
+      // Auto-redirect after 5 seconds
+      setTimeout(() => {
+        navigate("/");
+      }, 5000);
+    } catch (error) {
+      console.error('Failed to submit RSVP:', error);
+      alert('Failed to submit RSVP. Please try again.');
+    }
   };
 
   if (loading) {
