@@ -11,7 +11,7 @@ class EventController extends Controller {
   public function store(Request $r){
     $r->validate(['title'=>'required','start_at'=>'required|date']);
     $user = auth()->user();
-    $ev = Event::create(array_merge($r->only(['title','description','start_at','end_at','location']), ['created_by'=>$user->id]));
+    $ev = Event::create(array_merge($r->only(['title','description','start_at','end_at','location']), ['user_id'=>$user->id]));
     return response()->json($ev,201);
   }
 
