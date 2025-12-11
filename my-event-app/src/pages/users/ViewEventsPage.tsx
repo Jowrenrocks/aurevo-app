@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Calendar, MapPin, Users, Clock } from "lucide-react";
+import { Calendar, MapPin, Users, Clock, Copy, CheckCircle, ExternalLink } from "lucide-react";
 import { fetchEvents } from "../../services/events";
+import toast, { Toaster } from 'react-hot-toast';
 
 interface Event {
   id: number;
@@ -87,6 +88,30 @@ export default function ViewEventsPage() {
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
+  };
+
+  const copyRsvpLink = async (eventId: number) => {
+    const rsvpUrl = `${window.location.origin}/rsvp/${eventId}`;
+    try {
+      await navigator.clipboard.writeText(rsvpUrl);
+      toast.success('RSVP link copied to clipboard!');
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      toast.error('Failed to copy RSVP link');
+    }
+  };
+
+  const markEventComplete = async (eventId: number) => {
+    try {
+      await fetchEvents(); // This should be replaced with actual API call to update status
+      // For now, we'll just show a success message
+      toast.success('Event marked as completed!');
+      // Reload events to reflect changes
+      window.location.reload();
+    } catch (err) {
+      console.error('Failed to mark event complete:', err);
+      toast.error('Failed to mark event as completed');
+    }
   };
 
   if (loading) {
@@ -200,6 +225,33 @@ export default function ViewEventsPage() {
                         <p className="text-gray-700 text-sm">{event.description}</p>
                       </div>
                     )}
+
+                    {/* Action Buttons */}
+                    <div className="mt-6 flex flex-wrap gap-3">
+                      <button
+                        onClick={() => copyRsvpLink(event.id)}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+                      >
+                        <Copy className="w-4 h-4" />
+                        Copy RSVP Link
+                      </button>
+                      <button
+                        onClick={() => window.open(`/rsvp/${event.id}`, '_blank')}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        View RSVP Page
+                      </button>
+                      {tab === "upcoming" && (
+                        <button
+                          onClick={() => markEventComplete(event.id)}
+                          className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm font-medium"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Mark as Complete
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

@@ -137,7 +137,8 @@ export default function EnhancedEventDashboard() {
       const transformedEvents = eventsData.map((event: any) => {
         const eventDate = new Date(event.start_at);
         const now = new Date();
-        const status = eventDate > now ? 'upcoming' : 'completed';
+        // Show as completed only if explicitly concluded, otherwise upcoming
+        const status = event.status === 'concluded' ? 'completed' : 'upcoming';
 
         return {
           id: event.id,

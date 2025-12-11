@@ -472,6 +472,7 @@ export default function EventCreationWizard() {
           start_at: `${formData.eventDate}T${formData.startTime}:00`,
           end_at: formData.endTime ? `${formData.eventDate}T${formData.endTime}:00` : null,
           location: formData.venue?.name || null,
+          status: 'approved',
         };
 
         console.log('Submitting event data:', eventData);
