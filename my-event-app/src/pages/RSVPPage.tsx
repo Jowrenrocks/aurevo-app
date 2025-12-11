@@ -29,29 +29,57 @@ export default function PublicRSVPPage() {
     message: ""
   });
 
-  // Mock event data - replace with API call
+  // Fetch actual event data
   useEffect(() => {
     const fetchEvent = async () => {
-      // TODO: Replace with actual API call
-      // const response = await api.get(`/events/${eventId}/public`);
-      
-      // Mock data for now
-      const mockEvent = {
-        id: eventId,
-        title: "Wedding Reception - Smith & Jones",
-        date: "December 15, 2025",
-        time: "6:00 PM",
-        venue: "Tagoloan Convention Center",
-        venueAddress: "Napocor, Tagoloan, Misamis Oriental",
-        theme: "Elegant Garden",
-        hosts: "John Smith & Jane Jones",
-        description: "Join us in celebrating our special day!",
-        maxGuests: 2,
-        backgroundImage: bg
-      };
-      
-      setEvent(mockEvent);
-      setLoading(false);
+      try {
+        const response = await api.get(`/events/${eventId}/public`);
+        const eventData = response.data;
+
+        // Format the data for display
+        const formattedEvent = {
+          id: eventData.id,
+          title: eventData.title,
+          date: new Date(eventData.start_at).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }),
+          time: new Date(eventData.start_at).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          }),
+          venue: eventData.location || 'Location TBD',
+          venueAddress: 'Venue Address',
+          theme: 'Event Theme',
+          hosts: eventData.creator?.full_name || 'Event Organizer',
+          description: eventData.description,
+          maxGuests: 5, // Default max guests
+          backgroundImage: bg
+        };
+
+        setEvent(formattedEvent);
+      } catch (error) {
+        console.error('Failed to fetch event:', error);
+        // Fallback to mock data if API fails
+        const mockEvent = {
+          id: eventId,
+          title: "Event Not Found",
+          date: "N/A",
+          time: "N/A",
+          venue: "N/A",
+          venueAddress: "N/A",
+          theme: "N/A",
+          hosts: "N/A",
+          description: "This event could not be loaded.",
+          maxGuests: 1,
+          backgroundImage: bg
+        };
+        setEvent(mockEvent);
+      } finally {
+        setLoading(false);
+      }
     };
 
     if (eventId) {
@@ -71,7 +99,14 @@ export default function PublicRSVPPage() {
     e.preventDefault();
 
     try {
-      await api.post(`/events/${eventId}/rsvp`, guestInfo);
+      await api.post(`/events/${eventId}/rsvp-guest`, {
+        name: guestInfo.fullName,
+        email: guestInfo.email,
+        phone: guestInfo.phone,
+        status: 'attending',
+        guests: guestInfo.numberOfGuests,
+        special_requests: `${guestInfo.dietaryRestrictions ? `Dietary: ${guestInfo.dietaryRestrictions}. ` : ''}${guestInfo.message}`
+      });
       setSubmitted(true);
 
       // Auto-redirect after 5 seconds
