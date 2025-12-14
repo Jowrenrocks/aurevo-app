@@ -257,7 +257,11 @@ export default function EventManagementPage() {
       }} onSubmit={async (data) => {
         const loadingToast = toast.loading('Updating event...');
         try {
-          await api.put(`/events/${editingEvent.id}`, data);
+          await api.put(`/events/${editingEvent.id}`, {
+            title: data.title,
+            start_at: data.start_at,
+            location: data.location || ''
+          });
           toast.success('Event updated successfully!');
           setIsEditModalOpen(false);
           setEditingEvent(null);
@@ -274,12 +278,12 @@ export default function EventManagementPage() {
 }
 
 // Reusable Modal Component for Edit
-function EventFormModal({ event, onClose, onSubmit }: { event: Event; onClose: () => void; onSubmit: (data: { title: string; start_at: string; location: string }) => void }) {
+function EventFormModal({ event, onClose, onSubmit }: { event: Event; onClose: () => void; onSubmit: (data: { title: string; start_at: string; location: string | undefined }) => void }) {
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
     defaultValues: { title: event.title, start_at: event.start_at.split('T')[0], location: event.location }
   });
 
-  const onFormSubmit = (data: { title: string; start_at: string; location: string }) => {
+  const onFormSubmit = (data: { title: string; start_at: string; location: string | undefined }) => {
     onSubmit(data);
     reset();
   };

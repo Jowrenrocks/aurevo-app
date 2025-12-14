@@ -13,6 +13,31 @@ interface StatCardProps {
   color: string;
 }
 
+interface EventCardProps {
+  event: {
+    id: number;
+    title: string;
+    date: string;
+    attendees: number;
+    status: string;
+    revenue: number;
+  };
+  onViewDetails: (event: any) => void;
+}
+
+interface ActivityFeedProps {
+  activities: any[];
+}
+
+interface Event {
+  id: number;
+  title: string;
+  date: string;
+  attendees: number;
+  status: string;
+  revenue: number;
+}
+
 function StatCard({ icon: Icon, label, value, trend, color }: StatCardProps) {
   return (
     <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
@@ -35,7 +60,7 @@ function StatCard({ icon: Icon, label, value, trend, color }: StatCardProps) {
   );
 }
 
-function EventCard({ event, onViewDetails }) {
+function EventCard({ event, onViewDetails }: EventCardProps) {
   const statusColors = {
     upcoming: "bg-blue-100 text-blue-800",
     completed: "bg-green-100 text-green-800",
@@ -50,7 +75,7 @@ function EventCard({ event, onViewDetails }) {
           <h3 className="font-semibold text-lg text-gray-900">{event.title}</h3>
           <p className="text-sm text-gray-500 mt-1">📅 {new Date(event.date).toLocaleDateString()}</p>
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[event.status]}`}>
+        <span className={`px-3 py-1 rounded-full text-xs font-medium ${(statusColors as any)[event.status] || 'bg-gray-100 text-gray-800'}`}>
           {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
         </span>
       </div>
@@ -76,8 +101,8 @@ function EventCard({ event, onViewDetails }) {
   );
 }
 
-function ActivityFeed({ activities }) {
-  const typeIcons = {
+function ActivityFeed({ activities }: ActivityFeedProps) {
+  const typeIcons: Record<string, string> = {
     booking: "📅",
     payment: "💰",
     completion: "✅",
@@ -90,11 +115,11 @@ function ActivityFeed({ activities }) {
         <h2 className="text-xl font-bold text-gray-900">Recent Activity</h2>
         <Bell className="w-5 h-5 text-gray-400" />
       </div>
-      
+
       <div className="space-y-4">
-        {activities.map((activity) => (
+        {activities.map((activity: any) => (
           <div key={activity.id} className="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0">
-            <span className="text-2xl">{typeIcons[activity.type]}</span>
+            <span className="text-2xl">{typeIcons[activity.type] || "📝"}</span>
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-900">{activity.message}</p>
               <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
@@ -108,14 +133,14 @@ function ActivityFeed({ activities }) {
 
 export default function EnhancedEventDashboard() {
   const navigate = useNavigate();
-  const [events, setEvents] = useState([]);
-  const [stats, setStats] = useState(null);
+  const [events, setEvents] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
 
   useEffect(() => {
     loadData();
@@ -203,7 +228,7 @@ export default function EnhancedEventDashboard() {
     const headers = ['Title', 'Date', 'Status', 'Attendees', 'Revenue'];
     const csvContent = [
       headers.join(','),
-      ...csvData.map(row => headers.map(header => `"${row[header]}"`).join(','))
+      ...csvData.map(row => headers.map(header => `"${(row as any)[header]}"`).join(','))
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -219,11 +244,11 @@ export default function EnhancedEventDashboard() {
     toast.success('Report exported successfully');
   };
 
-  const handleEditEvent = (event) => {
+  const handleEditEvent = (event: Event) => {
     navigate(`/user/events/edit/${event.id}`);
   };
 
-  const handleViewAttendees = (event) => {
+  const handleViewAttendees = (event: Event) => {
     navigate(`/user/events/${event.id}/rsvps`);
   };
 

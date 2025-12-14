@@ -5,6 +5,38 @@ import toast, { Toaster } from 'react-hot-toast'; // Added for notifications
 import dashboardBg from "../../assets/dashboard-bg.png";
 import api from '../../utils/api'; // Import the API utility
 
+interface StepIndicatorProps {
+  currentStep: number;
+}
+
+interface FormData {
+  eventType: string;
+  eventName: string;
+  hostName: string;
+  contactNumber: string;
+  venue: { id: number; name: string; capacity: number } | null;
+  eventDate: string;
+  startTime: string;
+  endTime: string;
+  expectedGuests: string;
+  notes: string;
+  services: { id: number; name: string; icon: string }[];
+}
+
+interface StepProps {
+  formData: FormData;
+  updateFormData: (field: string, value: any) => void;
+}
+
+interface ServicesStepProps {
+  formData: FormData;
+  updateFormData: (field: string, value: any) => void;
+}
+
+interface ReviewStepProps {
+  formData: FormData;
+}
+
 const STEPS = [
   { id: 1, title: 'Basic Info', icon: FileText },
   { id: 2, title: 'Details', icon: Calendar },
@@ -41,7 +73,7 @@ const EVENT_TYPES = [
 
 const API_BASE = 'http://localhost:8000/api'; // Adjust to your Laravel API URL
 
-function StepIndicator({ currentStep }) {
+function StepIndicator({ currentStep }: StepIndicatorProps) {
   return (
     <div className="flex items-center justify-center mb-12">
       {STEPS.map((step, index) => {
@@ -75,7 +107,7 @@ function StepIndicator({ currentStep }) {
   );
 }
 
-function Step1BasicInfo({ formData, updateFormData }) {
+function Step1BasicInfo({ formData, updateFormData }: StepProps) {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Basic Event Information</h2>
@@ -150,7 +182,7 @@ function Step1BasicInfo({ formData, updateFormData }) {
   );
 }
 
-function Step2Details({ formData, updateFormData }) {
+function Step2Details({ formData, updateFormData }: StepProps) {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Event Details</h2>
@@ -261,8 +293,8 @@ function Step2Details({ formData, updateFormData }) {
   );
 }
 
-function Step3Services({ formData, updateFormData }) {
-  const toggleService = (service) => {
+function Step3Services({ formData, updateFormData }: ServicesStepProps) {
+  const toggleService = (service: { id: number; name: string; icon: string }) => {
     const services = formData.services || [];
     const exists = services.find(s => s.id === service.id);
     
@@ -273,7 +305,7 @@ function Step3Services({ formData, updateFormData }) {
     }
   };
 
-  const isSelected = (serviceId) => {
+  const isSelected = (serviceId: number) => {
     return (formData.services || []).some(s => s.id === serviceId);
   };
 
@@ -327,7 +359,7 @@ function Step3Services({ formData, updateFormData }) {
   );
 }
 
-function Step4Review({ formData }) {
+function Step4Review({ formData }: ReviewStepProps) {
   const eventType = EVENT_TYPES.find(t => t.id === formData.eventType);
 
   return (
@@ -415,7 +447,7 @@ function Step4Review({ formData }) {
 
 export default function EventCreationWizard() {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     eventType: '',
     eventName: '',
     hostName: '',
@@ -431,7 +463,7 @@ export default function EventCreationWizard() {
   const [submitted, setSubmitted] = useState(false);
   const navigate = useNavigate();
 
-  const updateFormData = (field, value) => {
+  const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 

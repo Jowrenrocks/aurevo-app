@@ -4,6 +4,30 @@ import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import api from '../../utils/api';
 
+interface StepIndicatorProps {
+  currentStep: number;
+}
+
+interface FormData {
+  eventType: string;
+  eventName: string;
+  description: string;
+  venue: { id: number; name: string; capacity: number } | null;
+  eventDate: string;
+  startTime: string;
+  endTime: string;
+  expectedGuests: string;
+}
+
+interface StepProps {
+  formData: FormData;
+  updateFormData: (field: string, value: any) => void;
+}
+
+interface ReviewStepProps {
+  formData: FormData;
+}
+
 const STEPS = [
   { id: 1, title: 'Basic Info', icon: FileText },
   { id: 2, title: 'Details', icon: Calendar },
@@ -26,7 +50,7 @@ const EVENT_TYPES = [
   { id: 'other', name: 'Other', icon: '🎉', color: 'from-amber-400 to-orange-500' }
 ];
 
-function StepIndicator({ currentStep }) {
+function StepIndicator({ currentStep }: StepIndicatorProps) {
   return (
     <div className="flex items-center justify-center mb-12">
       {STEPS.map((step, index) => {
@@ -53,7 +77,7 @@ function StepIndicator({ currentStep }) {
   );
 }
 
-function Step1BasicInfo({ formData, updateFormData }) {
+function Step1BasicInfo({ formData, updateFormData }: StepProps) {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Basic Event Information</h2>
@@ -112,7 +136,7 @@ function Step1BasicInfo({ formData, updateFormData }) {
   );
 }
 
-function Step2Details({ formData, updateFormData }) {
+function Step2Details({ formData, updateFormData }: StepProps) {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Event Details</h2>
@@ -210,7 +234,7 @@ function Step2Details({ formData, updateFormData }) {
   );
 }
 
-function Step3Review({ formData }) {
+function Step3Review({ formData }: ReviewStepProps) {
   const eventType = EVENT_TYPES.find(t => t.id === formData.eventType);
 
   return (
@@ -271,7 +295,7 @@ function Step3Review({ formData }) {
 
 export default function AdminCreateEventPage() {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     eventType: '',
     eventName: '',
     description: '',
@@ -285,7 +309,7 @@ export default function AdminCreateEventPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const updateFormData = (field, value) => {
+  const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -322,7 +346,7 @@ export default function AdminCreateEventPage() {
           description: formData.description,
           start_at: `${formData.eventDate}T${formData.startTime}:00`,
           end_at: formData.endTime ? `${formData.eventDate}T${formData.endTime}:00` : null,
-          location: formData.venue?.name || null,
+          location: formData.venue ? formData.venue.name : null,
         };
 
         await api.post('/events', eventData);
