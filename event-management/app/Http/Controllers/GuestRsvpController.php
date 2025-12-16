@@ -7,72 +7,106 @@ use App\Models\Rsvp;
 
 class GuestRsvpController extends Controller
 {
+    /**
+     * Get public event details (no authentication required)
+     */
     public function getEventPublic($eventId)
     {
-        $event = Event::with('creator')->findOrFail($eventId);
+        try {
+            $event = Event::with('creator')->findOrFail($eventId);
 
-        // Return public event details for RSVP page
-        return response()->json([
-            'id' => $event->id,
-            'title' => $event->title,
-            'description' => $event->description,
-            'start_at' => $event->start_at,
-            'end_at' => $event->end_at,
-            'location' => $event->location,
-            'creator' => [
-                'full_name' => $event->creator->full_name ?? 'Event Organizer'
-            ]
-        ]);
+            // Return public event details for RSVP page
+            return response()->json([
+                'id' => $event->id,
+                'title' => $event->title,
+                'description' => $event->description,
+                'start_at' => $event->start_at,
+                'end_at' => $event->end_at,
+                'location' => $event->location,
+                'creator' => [
+                    'full_name' => $event->creator->full_name ?? 'Event Organizer'
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Event not found',
+                'message' => $e->getMessage()
+            ], 404);
+        }
     }
 
+    /**
+     * Submit guest RSVP (no authentication required)
+     */
     public function submitRsvp(Request $request, $eventId)
     {
-        $request->validate([
+        // Validate the request
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
-            'phone' => 'nullable|string|max:20',
-            'status' => 'required|in:attending,not_attending,maybe',
+            'phone' => 'required|string|max:20',
+            'status' => 'required|in:yes,no,maybe',
             'guests' => 'nullable|integer|min:0|max:10',
+            'reason_for_declining' => 'required_if:status,no|nullable|string|max:1000',
             'special_requests' => 'nullable|string|max:1000'
         ]);
 
-        $event = Event::findOrFail($eventId);
+        try {
+            $event = Event::findOrFail($eventId);
 
-        // Check if RSVP already exists for this email
-        $existingRsvp = Rsvp::where('event_id', $eventId)
-                           ->where('guest_email', $request->email)
-                           ->first();
+            // Check if RSVP already exists for this email
+            $existingRsvp = Rsvp::where('event_id', $eventId)
+                               ->where('guest_email', $validated['email'])
+                               ->first();
 
-        if ($existingRsvp) {
-            // Update existing RSVP
-            $existingRsvp->update([
-                'guest_name' => $request->name,
-                'guest_phone' => $request->phone,
-                'status' => $request->status,
-                'guests' => $request->guests ?? 1,
-                'special_requests' => $request->special_requests
-            ]);
+            // Map status to both fields for compatibility
+            $statusMapping = [
+                'yes' => 'attending',
+                'no' => 'not_attending',
+                'maybe' => 'maybe'
+            ];
+
+            $rsvpData = [
+                'guest_name' => $validated['name'],
+                'guest_email' => $validated['email'],
+                'guest_phone' => $validated['phone'],
+                'response' => $validated['status'], // yes/no/maybe
+                'status' => $statusMapping[$validated['status']], // attending/not_attending/maybe
+                'guests' => $validated['status'] === 'yes' ? ($validated['guests'] ?? 1) : 0,
+                'reason_for_declining' => $validated['status'] === 'no' ? $validated['reason_for_declining'] : null,
+                'special_requests' => $validated['special_requests'] ?? null
+            ];
+
+            if ($existingRsvp) {
+                // Update existing RSVP
+                $existingRsvp->update($rsvpData);
+
+                return response()->json([
+                    'message' => 'RSVP updated successfully',
+                    'rsvp' => $existingRsvp
+                ]);
+            }
+
+            // Create new guest RSVP
+            $rsvpData['event_id'] = $eventId;
+            $rsvp = Rsvp::create($rsvpData);
 
             return response()->json([
-                'message' => 'RSVP updated successfully',
-                'rsvp' => $existingRsvp
-            ]);
+                'message' => 'RSVP submitted successfully',
+                'rsvp' => $rsvp
+            ], 201);
+
+        } catch (\Illuminate\Database\QueryException $e) {
+            return response()->json([
+                'error' => 'Database error',
+                'message' => 'Failed to save RSVP. Please try again.',
+                'details' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Server error',
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        // Create new guest RSVP
-        $rsvp = Rsvp::create([
-            'event_id' => $eventId,
-            'guest_name' => $request->name,
-            'guest_email' => $request->email,
-            'guest_phone' => $request->phone,
-            'status' => $request->status,
-            'guests' => $request->guests ?? 1,
-            'special_requests' => $request->special_requests
-        ]);
-
-        return response()->json([
-            'message' => 'RSVP submitted successfully',
-            'rsvp' => $rsvp
-        ], 201);
     }
 }

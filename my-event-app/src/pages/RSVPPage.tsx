@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, XCircle, HelpCircle } from "lucide-react";
 import api from "../utils/api";
 import bg from "../assets/rsvp-bg.png";
 
@@ -8,7 +8,9 @@ interface GuestInfo {
   fullName: string;
   email: string;
   phone: string;
+  response: 'yes' | 'no' | 'maybe' | '';
   numberOfGuests: number;
+  reasonForDeclining: string;
   dietaryRestrictions: string;
   message: string;
 }
@@ -24,7 +26,9 @@ export default function PublicRSVPPage() {
     fullName: "",
     email: "",
     phone: "",
+    response: '',
     numberOfGuests: 1,
+    reasonForDeclining: "",
     dietaryRestrictions: "",
     message: ""
   });
@@ -95,18 +99,58 @@ export default function PublicRSVPPage() {
     }));
   };
 
+  const handleResponseChange = (response: 'yes' | 'no' | 'maybe') => {
+    setGuestInfo(prev => ({
+      ...prev,
+      response,
+      // Clear reason if not declining
+      reasonForDeclining: response === 'no' ? prev.reasonForDeclining : '',
+      // Reset guests to 1 if not attending
+      numberOfGuests: response === 'no' ? 1 : prev.numberOfGuests
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validation
+    if (!guestInfo.response) {
+      alert('Please select your response (Yes, No, or Maybe)');
+      return;
+    }
+
+    if (guestInfo.response === 'no' && !guestInfo.reasonForDeclining.trim()) {
+      alert('Please provide a reason for declining');
+      return;
+    }
+
     try {
+      // Prepare special requests based on response
+      let specialRequests = '';
+      
+      if (guestInfo.response === 'no') {
+        specialRequests = `Reason for declining: ${guestInfo.reasonForDeclining}`;
+      } else {
+        const parts = [];
+        if (guestInfo.dietaryRestrictions) {
+          parts.push(`Dietary: ${guestInfo.dietaryRestrictions}`);
+        }
+        if (guestInfo.message) {
+          parts.push(guestInfo.message);
+        }
+        specialRequests = parts.join('. ');
+      }
+
       await api.post(`/events/${eventId}/rsvp-guest`, {
         name: guestInfo.fullName,
         email: guestInfo.email,
         phone: guestInfo.phone,
-        status: 'attending',
-        guests: guestInfo.numberOfGuests,
-        special_requests: `${guestInfo.dietaryRestrictions ? `Dietary: ${guestInfo.dietaryRestrictions}. ` : ''}${guestInfo.message}`
+        status: guestInfo.response,
+        guests: guestInfo.response === 'yes' ? guestInfo.numberOfGuests : 0,
+        reason_for_declining: guestInfo.response === 'no' ? guestInfo.reasonForDeclining : null,
+        special_requests: specialRequests || null
       });
+      
       setSubmitted(true);
 
       // Auto-redirect after 5 seconds
@@ -150,18 +194,37 @@ export default function PublicRSVPPage() {
   }
 
   if (submitted) {
+    const responseMessages = {
+      yes: {
+        title: "RSVP Confirmed!",
+        message: `Thank you, ${guestInfo.fullName}! Your RSVP for ${guestInfo.numberOfGuests} ${guestInfo.numberOfGuests === 1 ? "guest" : "guests"} has been received.`,
+        emoji: "🎉"
+      },
+      no: {
+        title: "Response Received",
+        message: `Thank you for letting us know, ${guestInfo.fullName}. We're sorry you can't make it.`,
+        emoji: "😔"
+      },
+      maybe: {
+        title: "Response Received",
+        message: `Thank you, ${guestInfo.fullName}! We've noted that you might attend. Please confirm when you can.`,
+        emoji: "🤔"
+      }
+    };
+
+    const responseInfo = responseMessages[guestInfo.response as 'yes' | 'no' | 'maybe'];
+
     return (
       <div className="min-h-screen bg-cover bg-center flex items-center justify-center" style={{ backgroundImage: `url(${bg})` }}>
         <div className="bg-white/90 backdrop-blur-md rounded-2xl p-12 shadow-2xl text-center max-w-xl">
-          <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="w-12 h-12 text-white" />
+          <div className={`w-20 h-20 ${guestInfo.response === 'yes' ? 'bg-green-500' : guestInfo.response === 'no' ? 'bg-red-500' : 'bg-yellow-500'} rounded-full flex items-center justify-center mx-auto mb-6`}>
+            {guestInfo.response === 'yes' && <CheckCircle className="w-12 h-12 text-white" />}
+            {guestInfo.response === 'no' && <XCircle className="w-12 h-12 text-white" />}
+            {guestInfo.response === 'maybe' && <HelpCircle className="w-12 h-12 text-white" />}
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">RSVP Confirmed!</h2>
-          <p className="text-lg text-gray-700 mb-2">
-            Thank you, <span className="font-semibold text-amber-600">{guestInfo.fullName}</span>!
-          </p>
-          <p className="text-gray-600 mb-6">
-            Your RSVP for <strong>{guestInfo.numberOfGuests}</strong> {guestInfo.numberOfGuests === 1 ? "guest" : "guests"} has been received.
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">{responseInfo.title}</h2>
+          <p className="text-lg text-gray-700 mb-6">
+            {responseInfo.message}
           </p>
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
             <p className="text-sm text-gray-700">
@@ -218,6 +281,84 @@ export default function PublicRSVPPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">RSVP Form</h2>
             
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Response Selection - YES/NO/MAYBE */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Will you attend? *
+                </label>
+                <div className="grid grid-cols-3 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => handleResponseChange('yes')}
+                    className={`p-6 rounded-xl border-2 transition-all ${
+                      guestInfo.response === 'yes'
+                        ? 'border-green-500 bg-green-50 shadow-lg'
+                        : 'border-gray-300 hover:border-gray-400 bg-white'
+                    }`}
+                  >
+                    <CheckCircle className={`w-10 h-10 mx-auto mb-3 ${
+                      guestInfo.response === 'yes' ? 'text-green-500' : 'text-gray-400'
+                    }`} />
+                    <div className="text-center font-bold text-lg mb-1">Yes</div>
+                    <div className="text-xs text-gray-600 text-center">I'll be there!</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleResponseChange('no')}
+                    className={`p-6 rounded-xl border-2 transition-all ${
+                      guestInfo.response === 'no'
+                        ? 'border-red-500 bg-red-50 shadow-lg'
+                        : 'border-gray-300 hover:border-gray-400 bg-white'
+                    }`}
+                  >
+                    <XCircle className={`w-10 h-10 mx-auto mb-3 ${
+                      guestInfo.response === 'no' ? 'text-red-500' : 'text-gray-400'
+                    }`} />
+                    <div className="text-center font-bold text-lg mb-1">No</div>
+                    <div className="text-xs text-gray-600 text-center">Can't make it</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleResponseChange('maybe')}
+                    className={`p-6 rounded-xl border-2 transition-all ${
+                      guestInfo.response === 'maybe'
+                        ? 'border-yellow-500 bg-yellow-50 shadow-lg'
+                        : 'border-gray-300 hover:border-gray-400 bg-white'
+                    }`}
+                  >
+                    <HelpCircle className={`w-10 h-10 mx-auto mb-3 ${
+                      guestInfo.response === 'maybe' ? 'text-yellow-500' : 'text-gray-400'
+                    }`} />
+                    <div className="text-center font-bold text-lg mb-1">Maybe</div>
+                    <div className="text-xs text-gray-600 text-center">Not sure yet</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Reason for Declining - Only show if response is "no" */}
+              {guestInfo.response === 'no' && (
+                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6">
+                  <label className="block text-sm font-semibold text-gray-900 mb-3">
+                    Please tell us why you can't attend *
+                  </label>
+                  <textarea
+                    name="reasonForDeclining"
+                    value={guestInfo.reasonForDeclining}
+                    onChange={handleChange}
+                    rows={3}
+                    className="w-full p-3 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                    placeholder="Let us know why you can't make it..."
+                    required={guestInfo.response === 'no'}
+                  />
+                  <p className="text-xs text-red-600 mt-2">
+                    This helps us plan better for future events
+                  </p>
+                </div>
+              )}
+
+              {/* Contact Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -264,53 +405,61 @@ export default function PublicRSVPPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Number of Guests *
-                  </label>
-                  <select
-                    name="numberOfGuests"
-                    value={guestInfo.numberOfGuests}
-                    onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                    required
-                  >
-                    {[...Array(event.maxGuests || 5)].map((_, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        {i + 1} {i === 0 ? "Guest" : "Guests"}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* Number of Guests - Only show if response is "yes" */}
+                {guestInfo.response === 'yes' && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Number of Guests *
+                    </label>
+                    <select
+                      name="numberOfGuests"
+                      value={guestInfo.numberOfGuests}
+                      onChange={handleChange}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      required={guestInfo.response === 'yes'}
+                    >
+                      {[...Array(event.maxGuests || 5)].map((_, i) => (
+                        <option key={i + 1} value={i + 1}>
+                          {i + 1} {i === 0 ? "Guest" : "Guests"}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Dietary Restrictions (Optional)
-                </label>
-                <input
-                  type="text"
-                  name="dietaryRestrictions"
-                  value={guestInfo.dietaryRestrictions}
-                  onChange={handleChange}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  placeholder="e.g., Vegetarian, Gluten-free, Allergies"
-                />
-              </div>
+              {/* Additional Info - Only show if response is "yes" or "maybe" */}
+              {(guestInfo.response === 'yes' || guestInfo.response === 'maybe') && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Dietary Restrictions (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      name="dietaryRestrictions"
+                      value={guestInfo.dietaryRestrictions}
+                      onChange={handleChange}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      placeholder="e.g., Vegetarian, Gluten-free, Allergies"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Message to Hosts (Optional)
-                </label>
-                <textarea
-                  name="message"
-                  value={guestInfo.message}
-                  onChange={handleChange}
-                  rows={4}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
-                  placeholder="Send your congratulations or special requests..."
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Message to Hosts (Optional)
+                    </label>
+                    <textarea
+                      name="message"
+                      value={guestInfo.message}
+                      onChange={handleChange}
+                      rows={4}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+                      placeholder="Send your congratulations or special requests..."
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                 <p className="text-sm text-gray-700">
@@ -329,9 +478,21 @@ export default function PublicRSVPPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white py-3 rounded-lg font-semibold hover:from-green-600 hover:to-emerald-600 transition-all shadow-lg"
+                  className={`flex-1 py-3 rounded-lg font-semibold transition-all shadow-lg ${
+                    guestInfo.response === 'yes'
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
+                      : guestInfo.response === 'no'
+                      ? 'bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600'
+                      : guestInfo.response === 'maybe'
+                      ? 'bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600'
+                      : 'bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed'
+                  } text-white`}
+                  disabled={!guestInfo.response}
                 >
-                  Confirm RSVP
+                  {guestInfo.response === 'yes' && '✓ Confirm Attendance'}
+                  {guestInfo.response === 'no' && '✗ Submit Response'}
+                  {guestInfo.response === 'maybe' && '? Submit Response'}
+                  {!guestInfo.response && 'Select Response First'}
                 </button>
               </div>
             </form>
