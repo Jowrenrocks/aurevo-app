@@ -32,13 +32,19 @@ class EventController extends Controller {
       'start_at'=>'required|date',
       'description'=>'nullable|string',
       'end_at'=>'nullable|date|after:start_at',
-      'location'=>'nullable|string|max:255'
+      'location'=>'nullable|string|max:255',
+      'host_name'=>'nullable|string|max:255',
+      'host_contact'=>'nullable|string|max:255'
     ]);
     
     $user = auth()->user();
+    
+    // Determine status based on user role
+    $status = ($user->role_id === 1) ? 'approved' : 'pending';
+    
     $ev = Event::create(array_merge(
-      $r->only(['title','description','start_at','end_at','location']), 
-      ['user_id'=>$user->id, 'status'=>'pending']
+      $r->only(['title','description','start_at','end_at','location','host_name','host_contact']), 
+      ['user_id'=>$user->id, 'status'=>$status]
     ));
     
     return response()->json($ev->load('creator'),201);
@@ -60,6 +66,8 @@ class EventController extends Controller {
       'start_at'=>'sometimes|date',
       'end_at'=>'nullable|date',
       'location'=>'nullable|string|max:255',
+      'host_name'=>'nullable|string|max:255',
+      'host_contact'=>'nullable|string|max:255',
       'status'=>'sometimes|in:draft,pending,approved,declined,concluded'
     ]);
     
@@ -137,7 +145,12 @@ class EventController extends Controller {
         ->withCount('rsvps')
         ->orderBy('created_at', 'desc')
         ->limit(5)
-        ->get()
+        ->get(),
+      'rsvp_breakdown' => [
+        'yes' => Rsvp::where('response', 'yes')->count(),
+        'no' => Rsvp::where('response', 'no')->count(),
+        'maybe' => Rsvp::where('response', 'maybe')->count()
+      ]
     ];
     
     return response()->json($stats);

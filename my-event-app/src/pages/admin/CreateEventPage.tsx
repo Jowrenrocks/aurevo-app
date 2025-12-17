@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, Users, MapPin, DollarSign, Clock, FileText, CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Calendar, Users, MapPin, Clock, FileText, CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import api from '../../utils/api';
@@ -11,15 +11,23 @@ interface StepIndicatorProps {
 interface FormData {
   eventType: string;
   eventName: string;
-  description: string;
+  hostName: string;
+  contactNumber: string;
   venue: { id: number; name: string; capacity: number } | null;
   eventDate: string;
   startTime: string;
   endTime: string;
   expectedGuests: string;
+  notes: string;
+  services: { id: number; name: string; icon: string }[];
 }
 
 interface StepProps {
+  formData: FormData;
+  updateFormData: (field: string, value: any) => void;
+}
+
+interface ServicesStepProps {
   formData: FormData;
   updateFormData: (field: string, value: any) => void;
 }
@@ -31,7 +39,8 @@ interface ReviewStepProps {
 const STEPS = [
   { id: 1, title: 'Basic Info', icon: FileText },
   { id: 2, title: 'Details', icon: Calendar },
-  { id: 3, title: 'Review', icon: CheckCircle }
+  { id: 3, title: 'Services Needed', icon: Users },
+  { id: 4, title: 'Review', icon: CheckCircle }
 ];
 
 const VENUES = [
@@ -40,6 +49,17 @@ const VENUES = [
   { id: 3, name: 'Luxury Garden Resort', capacity: 300 },
   { id: 4, name: 'Private Residence', capacity: 150 },
   { id: 5, name: 'Custom Venue', capacity: 0 }
+];
+
+const SERVICES = [
+  { id: 1, name: 'Catering', icon: '🍽️' },
+  { id: 2, name: 'Photography', icon: '📷' },
+  { id: 3, name: 'Videography', icon: '🎥' },
+  { id: 4, name: 'DJ/Entertainment', icon: '🎵' },
+  { id: 5, name: 'Decorations', icon: '🎨' },
+  { id: 6, name: 'Event Coordinator', icon: '👔' },
+  { id: 7, name: 'Sound System', icon: '🔊' },
+  { id: 8, name: 'Lighting', icon: '💡' }
 ];
 
 const EVENT_TYPES = [
@@ -57,19 +77,26 @@ function StepIndicator({ currentStep }: StepIndicatorProps) {
         const Icon = step.icon;
         const isCompleted = currentStep > step.id;
         const isCurrent = currentStep === step.id;
-
+        
         return (
-          <div key={step.id} className="flex flex-col items-center">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
-              isCompleted ? 'bg-green-500' : isCurrent ? 'bg-amber-500' : 'bg-gray-300'
-            }`}>
-              <Icon className="w-6 h-6 text-white" />
+          <div key={step.id} className="flex items-center">
+            <div className="flex flex-col items-center">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                isCompleted ? 'bg-green-500' : isCurrent ? 'bg-amber-500' : 'bg-gray-300'
+              }`}>
+                <Icon className="w-6 h-6 text-white" />
+              </div>
+              <span className={`text-xs mt-2 font-medium ${
+                isCurrent ? 'text-amber-600' : 'text-gray-600'
+              }`}>
+                {step.title}
+              </span>
             </div>
-            <span className={`text-xs mt-2 font-medium ${
-              isCurrent ? 'text-amber-600' : 'text-gray-600'
-            }`}>
-              {step.title}
-            </span>
+            {index < STEPS.length - 1 && (
+              <div className={`w-24 h-1 mx-2 transition-all ${
+                isCompleted ? 'bg-green-500' : 'bg-gray-300'
+              }`} />
+            )}
           </div>
         );
       })}
@@ -81,7 +108,7 @@ function Step1BasicInfo({ formData, updateFormData }: StepProps) {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Basic Event Information</h2>
-
+      
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Event Type *
@@ -113,24 +140,40 @@ function Step1BasicInfo({ formData, updateFormData }: StepProps) {
           type="text"
           value={formData.eventName}
           onChange={(e) => updateFormData('eventName', e.target.value)}
-          placeholder="e.g., Corporate Gala 2025"
+          placeholder="e.g., Annual Company Gala 2025"
           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
           required
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Description *
-        </label>
-        <textarea
-          value={formData.description}
-          onChange={(e) => updateFormData('description', e.target.value)}
-          placeholder="Describe the event..."
-          rows={4}
-          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
-          required
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Host Name *
+          </label>
+          <input
+            type="text"
+            value={formData.hostName}
+            onChange={(e) => updateFormData('hostName', e.target.value)}
+            placeholder="Your name"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Contact Number *
+          </label>
+          <input
+            type="tel"
+            value={formData.contactNumber}
+            onChange={(e) => updateFormData('contactNumber', e.target.value)}
+            placeholder="+63 XXX XXX XXXX"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            required
+          />
+        </div>
       </div>
     </div>
   );
@@ -230,11 +273,90 @@ function Step2Details({ formData, updateFormData }: StepProps) {
           />
         </div>
       </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Special Requests / Notes
+        </label>
+        <textarea
+          value={formData.notes}
+          onChange={(e) => updateFormData('notes', e.target.value)}
+          placeholder="Any special requirements or notes..."
+          rows={4}
+          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+        />
+      </div>
     </div>
   );
 }
 
-function Step3Review({ formData }: ReviewStepProps) {
+function Step3Services({ formData, updateFormData }: ServicesStepProps) {
+  const toggleService = (service: { id: number; name: string; icon: string }) => {
+    const services = formData.services || [];
+    const exists = services.find(s => s.id === service.id);
+    
+    if (exists) {
+      updateFormData('services', services.filter(s => s.id !== service.id));
+    } else {
+      updateFormData('services', [...services, service]);
+    }
+  };
+
+  const isSelected = (serviceId: number) => {
+    return (formData.services || []).some(s => s.id === serviceId);
+  };
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">Services Needed</h2>
+      <p className="text-gray-600 mb-4">
+        Select the services you'll be arranging for your event. This helps track your event requirements.
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {SERVICES.map(service => {
+          const selected = isSelected(service.id);
+          
+          return (
+            <div
+              key={service.id}
+              className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                selected ? 'border-amber-500 bg-amber-50' : 'border-gray-200 hover:border-gray-300'
+              }`}
+              onClick={() => toggleService(service)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">{service.icon}</span>
+                  <h3 className="font-semibold text-gray-900">{service.name}</h3>
+                </div>
+                <button
+                  type="button"
+                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                    selected
+                      ? 'bg-amber-500 border-amber-500'
+                      : 'border-gray-300'
+                  }`}
+                >
+                  {selected && <CheckCircle className="w-4 h-4 text-white" />}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-6">
+        <p className="text-sm text-gray-700">
+          <strong>Note:</strong> You'll be responsible for contacting and paying these service providers directly. 
+          This list is just to help you track what you need for your event.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function Step4Review({ formData }: ReviewStepProps) {
   const eventType = EVENT_TYPES.find(t => t.id === formData.eventType);
 
   return (
@@ -286,9 +408,36 @@ function Step3Review({ formData }: ReviewStepProps) {
       </div>
 
       <div className="bg-white rounded-xl p-6 border border-gray-200">
-        <h3 className="font-bold text-lg mb-4">Description</h3>
-        <p className="text-sm text-gray-600">{formData.description}</p>
+        <h3 className="font-bold text-lg mb-4">Contact Information</h3>
+        <div className="space-y-2 text-sm">
+          <p><span className="font-medium">Host:</span> {formData.hostName}</p>
+          <p><span className="font-medium">Phone:</span> {formData.contactNumber}</p>
+        </div>
       </div>
+
+      {formData.services && formData.services.length > 0 && (
+        <div className="bg-white rounded-xl p-6 border border-gray-200">
+          <h3 className="font-bold text-lg mb-4">Services You're Arranging</h3>
+          <div className="flex flex-wrap gap-2">
+            {formData.services.map(service => (
+              <span key={service.id} className="bg-amber-100 text-amber-800 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                <span>{service.icon}</span>
+                {service.name}
+              </span>
+            ))}
+          </div>
+          <p className="text-sm text-gray-600 mt-4">
+            Remember: You'll need to contact and book these services separately.
+          </p>
+        </div>
+      )}
+
+      {formData.notes && (
+        <div className="bg-white rounded-xl p-6 border border-gray-200">
+          <h3 className="font-bold text-lg mb-2">Special Notes</h3>
+          <p className="text-sm text-gray-600">{formData.notes}</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -298,12 +447,15 @@ export default function AdminCreateEventPage() {
   const [formData, setFormData] = useState<FormData>({
     eventType: '',
     eventName: '',
-    description: '',
+    hostName: '',
+    contactNumber: '',
     venue: null,
     eventDate: '',
     startTime: '',
     endTime: '',
-    expectedGuests: ''
+    expectedGuests: '',
+    notes: '',
+    services: []
   });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -316,11 +468,14 @@ export default function AdminCreateEventPage() {
   const validateStep = () => {
     switch (currentStep) {
       case 1:
-        return formData.eventType && formData.eventName && formData.description;
+        return formData.eventType && formData.eventName && formData.hostName && 
+               formData.contactNumber;
       case 2:
-        return formData.venue && formData.eventDate && formData.startTime &&
+        return formData.venue && formData.eventDate && formData.startTime && 
                formData.endTime && formData.expectedGuests;
       case 3:
+        return true; // Services are optional
+      case 4:
         return true;
       default:
         return false;
@@ -329,7 +484,9 @@ export default function AdminCreateEventPage() {
 
   const handleNext = () => {
     if (validateStep()) {
-      setCurrentStep(prev => Math.min(prev + 1, 3));
+      setCurrentStep(prev => Math.min(prev + 1, 4));
+    } else {
+      toast.error('Please fill in all required fields');
     }
   };
 
@@ -338,30 +495,48 @@ export default function AdminCreateEventPage() {
   };
 
   const handleSubmit = async () => {
-    if (validateStep()) {
-      setLoading(true);
-      try {
-        const eventData = {
-          title: formData.eventName,
-          description: formData.description,
-          start_at: `${formData.eventDate}T${formData.startTime}:00`,
-          end_at: formData.endTime ? `${formData.eventDate}T${formData.endTime}:00` : null,
-          location: formData.venue ? formData.venue.name : null,
-        };
+    if (!validateStep()) {
+      toast.error('Please complete all required fields');
+      return;
+    }
 
-        await api.post('/events', eventData);
-        setSubmitted(true);
-
-        setTimeout(() => {
-          navigate('/admin/events');
-        }, 2000);
-
-      } catch (error) {
-        console.error('Error creating event:', error);
-        toast.error('Failed to create event. Please try again.');
-      } finally {
-        setLoading(false);
+    setLoading(true);
+    try {
+      // Build description with host info and services
+      let description = `${formData.eventType} event\nHost: ${formData.hostName} (${formData.contactNumber})\nExpected guests: ${formData.expectedGuests}`;
+      
+      if (formData.notes) {
+        description += `\n\nNotes: ${formData.notes}`;
       }
+      
+      if (formData.services.length > 0) {
+        description += `\n\nServices needed: ${formData.services.map(s => s.name).join(', ')}`;
+      }
+
+      const eventData = {
+        title: formData.eventName,
+        description: description,
+        start_at: `${formData.eventDate}T${formData.startTime}:00`,
+        end_at: formData.endTime ? `${formData.eventDate}T${formData.endTime}:00` : null,
+        location: formData.venue?.name || null,
+        status: 'approved', // Admin events are auto-approved
+      };
+
+      await api.post('/events', eventData);
+
+      setSubmitted(true);
+      toast.success('Event created successfully!');
+
+      // Redirect after 2 seconds
+      setTimeout(() => {
+        navigate('/admin/events');
+      }, 2000);
+
+    } catch (error: any) {
+      console.error('Error creating event:', error);
+      toast.error(error.response?.data?.message || 'Failed to create event. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -374,7 +549,7 @@ export default function AdminCreateEventPage() {
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Event Created Successfully!</h2>
           <p className="text-gray-600 mb-4">
-            The event has been created and is now available for management.
+            Your event has been created and is now available for viewing.
           </p>
           <div className="inline-block px-6 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
             Redirecting to events...
@@ -385,11 +560,12 @@ export default function AdminCreateEventPage() {
   }
 
   return (
-    <div className="p-8 bg-[url('/src/assets/dashboard-bg.png')] bg-cover min-h-screen">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 p-6">
+      <Toaster position="top-right" />
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Create New Event</h1>
-          <p className="text-gray-600">Set up a new event for management</p>
+          <p className="text-gray-600">Plan and organize your event with ease</p>
         </div>
 
         <StepIndicator currentStep={currentStep} />
@@ -402,7 +578,10 @@ export default function AdminCreateEventPage() {
             <Step2Details formData={formData} updateFormData={updateFormData} />
           )}
           {currentStep === 3 && (
-            <Step3Review formData={formData} />
+            <Step3Services formData={formData} updateFormData={updateFormData} />
+          )}
+          {currentStep === 4 && (
+            <Step4Review formData={formData} />
           )}
         </div>
 
@@ -418,7 +597,7 @@ export default function AdminCreateEventPage() {
           )}
 
           <div className="ml-auto">
-            {currentStep < 3 ? (
+            {currentStep < 4 ? (
               <button
                 onClick={handleNext}
                 disabled={!validateStep()}
@@ -431,7 +610,7 @@ export default function AdminCreateEventPage() {
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg font-medium hover:from-green-600 hover:to-emerald-600 transition-all flex items-center gap-2 shadow-lg disabled:opacity-50"
+                className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg font-medium hover:from-green-600 hover:to-emerald-600 transition-all flex items-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <CheckCircle className="w-5 h-5" />
                 {loading ? 'Creating...' : 'Create Event'}
@@ -440,7 +619,6 @@ export default function AdminCreateEventPage() {
           </div>
         </div>
       </div>
-      <Toaster />
     </div>
   );
 }

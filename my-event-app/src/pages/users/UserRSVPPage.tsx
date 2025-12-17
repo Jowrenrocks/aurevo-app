@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Users, UserCheck, UserX, User, Download, Search, Filter, Eye, X, Calendar } from "lucide-react";
+import { Users, UserCheck, UserX, User, Download, Search, Filter, Eye, X, Calendar, Mail, Phone, MessageSquare, RefreshCw, Loader2, AlertCircle } from "lucide-react";
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -11,6 +11,14 @@ interface RSVP {
     title: string;
     start_at: string;
     location?: string;
+    creator?: {
+      full_name: string;
+    };
+  };
+  user_id?: number;
+  user?: {
+    full_name: string;
+    email: string;
   };
   guest_name?: string;
   guest_email?: string;
@@ -38,7 +46,7 @@ export default function UserRSVPPage() {
 
   const fetchRsvps = async () => {
     try {
-      // Fetch all events to get RSVP counts
+      // Fetch user's events
       const eventsResponse = await api.get('/events');
       const events = eventsResponse.data;
 
@@ -54,7 +62,8 @@ export default function UserRSVPPage() {
               id: event.id,
               title: event.title,
               start_at: event.start_at,
-              location: event.location
+              location: event.location,
+              creator: event.creator
             }
           }));
           allRsvps.push(...eventRsvps);
@@ -75,15 +84,27 @@ export default function UserRSVPPage() {
     }
   };
 
+  const handleRefresh = () => {
+    setLoading(true);
+    fetchRsvps();
+    toast.success('RSVPs refreshed');
+  };
+
   useEffect(() => {
     let filtered = rsvps;
 
     if (searchTerm) {
-      filtered = filtered.filter(rsvp =>
-        rsvp.guest_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        rsvp.guest_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        rsvp.event?.title?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      filtered = filtered.filter(rsvp => {
+        const attendeeName = rsvp.guest_name || rsvp.user?.full_name || '';
+        const attendeeEmail = rsvp.guest_email || rsvp.user?.email || '';
+        const eventTitle = rsvp.event?.title || '';
+        
+        return (
+          attendeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          attendeeEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          eventTitle.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      });
     }
 
     if (statusFilter !== "all") {
@@ -112,8 +133,7 @@ export default function UserRSVPPage() {
   }, [rsvps, searchTerm, statusFilter, eventFilter]);
 
   const getStatusBadge = (rsvp: RSVP) => {
-    // Determine the actual status
-    let displayStatus: 'yes' | 'no' | 'maybe' | 'attending' | 'not_attending' = 'maybe';
+    let displayStatus: 'yes' | 'no' | 'maybe' = 'maybe';
     
     if (rsvp.response === 'yes' || rsvp.status === 'attending') {
       displayStatus = 'yes';
@@ -126,25 +146,19 @@ export default function UserRSVPPage() {
     const styles = {
       yes: "bg-green-100 text-green-800 border-green-300",
       no: "bg-red-100 text-red-800 border-red-300",
-      maybe: "bg-yellow-100 text-yellow-800 border-yellow-300",
-      attending: "bg-green-100 text-green-800 border-green-300",
-      not_attending: "bg-red-100 text-red-800 border-red-300"
+      maybe: "bg-yellow-100 text-yellow-800 border-yellow-300"
     };
 
     const icons = {
       yes: <UserCheck className="w-3 h-3" />,
       no: <UserX className="w-3 h-3" />,
-      maybe: <User className="w-3 h-3" />,
-      attending: <UserCheck className="w-3 h-3" />,
-      not_attending: <UserX className="w-3 h-3" />
+      maybe: <User className="w-3 h-3" />
     };
 
     const labels = {
       yes: "Attending",
       no: "Not Attending",
-      maybe: "Maybe",
-      attending: "Attending",
-      not_attending: "Not Attending"
+      maybe: "Maybe"
     };
 
     return (
@@ -156,12 +170,18 @@ export default function UserRSVPPage() {
   };
 
   const exportToCSV = () => {
-    const headers = ["Event", "Event Date", "Attendee Name", "Email", "Phone", "Status", "Guests", "Reason for Declining", "Special Requests", "RSVP Date"];
+    if (filteredRsvps.length === 0) {
+      toast.error('No RSVPs to export');
+      return;
+    }
+
+    const headers = ["Event", "Event Date", "Host/Creator", "Attendee Name", "Email", "Phone", "Status", "Guests", "Reason for Declining", "Special Requests", "RSVP Date"];
     const csvData = filteredRsvps.map(rsvp => [
       rsvp.event?.title || 'N/A',
       rsvp.event?.start_at ? new Date(rsvp.event.start_at).toLocaleDateString() : 'N/A',
-      rsvp.guest_name || 'N/A',
-      rsvp.guest_email || 'N/A',
+      rsvp.event?.creator?.full_name || 'N/A',
+      rsvp.guest_name || rsvp.user?.full_name || 'N/A',
+      rsvp.guest_email || rsvp.user?.email || 'N/A',
       rsvp.guest_phone || 'N/A',
       rsvp.response || rsvp.status || 'N/A',
       rsvp.guests || 0,
@@ -210,8 +230,8 @@ export default function UserRSVPPage() {
     return (
       <div className="p-8 bg-[url('/src/assets/dashboard-bg.png')] bg-cover min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#d4b885] mx-auto"></div>
-          <p className="mt-4 text-[#3b2a13]">Loading RSVPs...</p>
+          <Loader2 className="w-12 h-12 text-[#d4b885] mx-auto mb-4 animate-spin" />
+          <p className="text-lg text-[#3b2a13] font-medium">Loading RSVPs...</p>
         </div>
       </div>
     );
@@ -226,13 +246,22 @@ export default function UserRSVPPage() {
             <h2 className="text-3xl font-bold text-[#3b2a13]">RSVP MANAGEMENT</h2>
             <p className="text-sm text-[#3b2a13]">Manage attendee responses and guest lists</p>
           </div>
-          <button
-            onClick={exportToCSV}
-            className="px-6 py-3 bg-[#3b2a13] text-white rounded-lg font-semibold hover:bg-[#2a1f13] transition-colors flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Export CSV
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleRefresh}
+              className="px-4 py-2 bg-white text-[#3b2a13] rounded-lg font-semibold hover:bg-gray-100 transition-colors flex items-center gap-2 border-2 border-[#3b2a13]"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </button>
+            <button
+              onClick={exportToCSV}
+              className="px-6 py-3 bg-[#3b2a13] text-white rounded-lg font-semibold hover:bg-[#2a1f13] transition-colors flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+          </div>
         </div>
       </div>
 
@@ -312,6 +341,7 @@ export default function UserRSVPPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Host</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attendee</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guests</th>
@@ -334,10 +364,21 @@ export default function UserRSVPPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">
+                      {rsvp.event?.creator?.full_name || 'N/A'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{rsvp.guest_name || 'N/A'}</div>
-                      <div className="text-sm text-gray-500">{rsvp.guest_email || 'N/A'}</div>
-                      <div className="text-sm text-gray-500">{rsvp.guest_phone || 'N/A'}</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {rsvp.guest_name || rsvp.user?.full_name || 'N/A'}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {rsvp.guest_email || rsvp.user?.email || 'N/A'}
+                      </div>
+                      {rsvp.guest_phone && (
+                        <div className="text-sm text-gray-500">{rsvp.guest_phone}</div>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -380,7 +421,9 @@ export default function UserRSVPPage() {
             <div className="p-6">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">{selectedRsvp.guest_name || 'Guest'}</h2>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {selectedRsvp.guest_name || selectedRsvp.user?.full_name || 'Guest'}
+                  </h2>
                   <p className="text-gray-600 mt-1">RSVP Details</p>
                 </div>
                 <button
@@ -409,20 +452,26 @@ export default function UserRSVPPage() {
                       <span className="text-gray-600">Location:</span>
                       <span className="font-medium">{selectedRsvp.event?.location || 'N/A'}</span>
                     </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Host:</span>
+                      <span className="font-medium">{selectedRsvp.event?.creator?.full_name || 'N/A'}</span>
+                    </div>
                   </div>
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="font-semibold text-gray-900 mb-3">Contact Information</h3>
                   <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Email:</span>
-                      <span className="font-medium">{selectedRsvp.guest_email || 'N/A'}</span>
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-gray-500" />
+                      <span className="font-medium">{selectedRsvp.guest_email || selectedRsvp.user?.email || 'N/A'}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Phone:</span>
-                      <span className="font-medium">{selectedRsvp.guest_phone || 'N/A'}</span>
-                    </div>
+                    {selectedRsvp.guest_phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-gray-500" />
+                        <span className="font-medium">{selectedRsvp.guest_phone}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -448,15 +497,25 @@ export default function UserRSVPPage() {
 
                 {selectedRsvp.response === 'no' && selectedRsvp.reason_for_declining && (
                   <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
-                    <h3 className="font-semibold text-red-900 mb-2">Reason for Declining</h3>
-                    <p className="text-sm text-red-800">{selectedRsvp.reason_for_declining}</p>
+                    <div className="flex items-start gap-2">
+                      <MessageSquare className="w-5 h-5 text-red-600 mt-0.5" />
+                      <div>
+                        <h3 className="font-semibold text-red-900 mb-2">Reason for Declining</h3>
+                        <p className="text-sm text-red-800">{selectedRsvp.reason_for_declining}</p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
                 {(selectedRsvp.response === 'yes' || selectedRsvp.response === 'maybe') && selectedRsvp.special_requests && (
                   <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                    <h3 className="font-semibold text-blue-900 mb-2">Special Requests</h3>
-                    <p className="text-sm text-blue-800">{selectedRsvp.special_requests}</p>
+                    <div className="flex items-start gap-2">
+                      <MessageSquare className="w-5 h-5 text-blue-600 mt-0.5" />
+                      <div>
+                        <h3 className="font-semibold text-blue-900 mb-2">Special Requests</h3>
+                        <p className="text-sm text-blue-800">{selectedRsvp.special_requests}</p>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
