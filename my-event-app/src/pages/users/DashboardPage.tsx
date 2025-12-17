@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Users, DollarSign, TrendingUp, Bell, Search, Filter, RefreshCw, Plus, FileText, Eye, Edit, AlertCircle } from 'lucide-react';
+import { Calendar, Users, DollarSign, TrendingUp, Bell, Search, Filter, RefreshCw, Plus, FileText, Eye, Edit, AlertCircle, Download, ExternalLink } from 'lucide-react';
 import dashboardBg from "../../assets/dashboard-bg.png";
 import api from '../../utils/api';
 import toast, { Toaster } from 'react-hot-toast';
@@ -9,7 +9,7 @@ interface StatCardProps {
   icon: React.ElementType;
   label: string;
   value: string | number;
-  trend?: string;  // ← Add the ? to make it optional
+  trend?: string;
   color: string;
 }
 
@@ -17,25 +17,23 @@ interface EventCardProps {
   event: {
     id: number;
     title: string;
-    date: string;
-    attendees: number;
+    start_at: string;
+    location?: string;
+    rsvps_count: number;
     status: string;
-    revenue: number;
   };
   onViewDetails: (event: any) => void;
-}
-
-interface ActivityFeedProps {
-  activities: any[];
 }
 
 interface Event {
   id: number;
   title: string;
-  date: string;
-  attendees: number;
+  start_at: string;
+  end_at?: string;
+  location?: string;
+  rsvps_count: number;
   status: string;
-  revenue: number;
+  description?: string;
 }
 
 function StatCard({ icon: Icon, label, value, trend, color }: StatCardProps) {
@@ -61,11 +59,37 @@ function StatCard({ icon: Icon, label, value, trend, color }: StatCardProps) {
 }
 
 function EventCard({ event, onViewDetails }: EventCardProps) {
+  const navigate = useNavigate();
+  
   const statusColors = {
-    upcoming: "bg-blue-100 text-blue-800",
-    completed: "bg-green-100 text-green-800",
+    draft: "bg-gray-100 text-gray-800",
     pending: "bg-yellow-100 text-yellow-800",
-    cancelled: "bg-red-100 text-red-800"
+    approved: "bg-green-100 text-green-800",
+    declined: "bg-red-100 text-red-800",
+    concluded: "bg-blue-100 text-blue-800"
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const handleViewRSVPs = () => {
+    navigate('/user/rsvps', { state: { eventId: event.id } });
+  };
+
+  const copyRSVPLink = async () => {
+    const rsvpUrl = `${window.location.origin}/rsvp/${event.id}`;
+    try {
+      await navigator.clipboard.writeText(rsvpUrl);
+      toast.success('RSVP link copied to clipboard!');
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      toast.error('Failed to copy RSVP link');
+    }
   };
 
   return (
@@ -73,7 +97,7 @@ function EventCard({ event, onViewDetails }: EventCardProps) {
       <div className="flex justify-between items-start mb-3">
         <div>
           <h3 className="font-semibold text-lg text-gray-900">{event.title}</h3>
-          <p className="text-sm text-gray-500 mt-1">📅 {new Date(event.date).toLocaleDateString()}</p>
+          <p className="text-sm text-gray-500 mt-1">📅 {formatDate(event.start_at)}</p>
         </div>
         <span className={`px-3 py-1 rounded-full text-xs font-medium ${(statusColors as any)[event.status] || 'bg-gray-100 text-gray-800'}`}>
           {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
@@ -83,49 +107,38 @@ function EventCard({ event, onViewDetails }: EventCardProps) {
       <div className="space-y-2 mb-4">
         <div className="flex items-center text-sm text-gray-600">
           <Users className="w-4 h-4 mr-2" />
-          <span>{event.attendees} attendees</span>
+          <span>{event.rsvps_count || 0} RSVPs</span>
         </div>
-        <div className="flex items-center text-sm text-gray-600">
-          <DollarSign className="w-4 h-4 mr-2" />
-          <span>₱{event.revenue.toLocaleString()}</span>
-        </div>
+        {event.location && (
+          <div className="flex items-center text-sm text-gray-600">
+            <Calendar className="w-4 h-4 mr-2" />
+            <span>{event.location}</span>
+          </div>
+        )}
       </div>
       
-      <button
-        onClick={() => onViewDetails(event)}
-        className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-2 rounded-lg font-medium hover:from-amber-600 hover:to-orange-600 transition-all"
-      >
-        View Details
-      </button>
-    </div>
-  );
-}
-
-function ActivityFeed({ activities }: ActivityFeedProps) {
-  const typeIcons: Record<string, string> = {
-    booking: "📅",
-    payment: "💰",
-    completion: "✅",
-    update: "🔄"
-  };
-
-  return (
-    <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-gray-900">Recent Activity</h2>
-        <Bell className="w-5 h-5 text-gray-400" />
-      </div>
-
-      <div className="space-y-4">
-        {activities.map((activity: any) => (
-          <div key={activity.id} className="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0">
-            <span className="text-2xl">{typeIcons[activity.type] || "📝"}</span>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">{activity.message}</p>
-              <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
-            </div>
-          </div>
-        ))}
+      <div className="flex gap-2">
+        <button
+          onClick={() => onViewDetails(event)}
+          className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white py-2 rounded-lg font-medium hover:from-amber-600 hover:to-orange-600 transition-all text-sm flex items-center justify-center gap-1"
+        >
+          <Eye className="w-4 h-4" />
+          View
+        </button>
+        <button
+          onClick={handleViewRSVPs}
+          className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-medium hover:bg-blue-600 transition-all text-sm flex items-center justify-center gap-1"
+        >
+          <Users className="w-4 h-4" />
+          RSVPs
+        </button>
+        <button
+          onClick={copyRSVPLink}
+          className="px-3 bg-purple-500 text-white py-2 rounded-lg font-medium hover:bg-purple-600 transition-all text-sm"
+          title="Copy RSVP Link"
+        >
+          <ExternalLink className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );
@@ -133,18 +146,37 @@ function ActivityFeed({ activities }: ActivityFeedProps) {
 
 export default function EnhancedEventDashboard() {
   const navigate = useNavigate();
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
-  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    // Filter events based on search and filter
+    let filtered = events;
+
+    if (searchTerm) {
+      filtered = filtered.filter(event =>
+        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.location?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (filterType !== "all") {
+      filtered = filtered.filter(event => event.status === filterType);
+    }
+
+    setFilteredEvents(filtered);
+  }, [events, searchTerm, filterType]);
 
   const loadData = async (showRefreshIndicator = false) => {
     if (showRefreshIndicator) {
@@ -158,33 +190,16 @@ export default function EnhancedEventDashboard() {
       const response = await api.get('/events');
       const eventsData = response.data;
 
-      // Transform backend data to match frontend format
-      const transformedEvents = eventsData.map((event: any) => {
-        const eventDate = new Date(event.start_at);
-        const now = new Date();
-        // Show as completed only if explicitly concluded, otherwise upcoming
-        const status = event.status === 'concluded' ? 'completed' : 'upcoming';
-
-        return {
-          id: event.id,
-          title: event.title,
-          date: event.start_at,
-          attendees: 0, // Will be fetched separately if needed
-          status: status,
-          revenue: 0, // No revenue in API, set to 0
-          type: 'general' // No type in API, set to general
-        };
-      });
-
-      setEvents(transformedEvents);
+      setEvents(eventsData);
+      setFilteredEvents(eventsData);
 
       // Calculate stats from events
+      const now = new Date();
       const statsData = {
-        totalEvents: transformedEvents.length,
-        upcomingEvents: transformedEvents.filter((e: any) => e.status === 'upcoming').length,
-        totalRevenue: 0, // No revenue data
-        totalAttendees: 0, // No attendees count in list, would need separate calls
-        recentActivity: [] // No activity API, leave empty for now
+        totalEvents: eventsData.length,
+        upcomingEvents: eventsData.filter((e: Event) => new Date(e.start_at) > now).length,
+        totalRsvps: eventsData.reduce((sum: number, e: Event) => sum + (e.rsvps_count || 0), 0),
+        approvedEvents: eventsData.filter((e: Event) => e.status === 'approved').length
       };
 
       setStats(statsData);
@@ -208,24 +223,24 @@ export default function EnhancedEventDashboard() {
   };
 
   const handleCreateEvent = () => {
-    navigate('/user/events/create');
+    navigate('/user/create-event');
   };
 
   const handleViewCalendar = () => {
-    navigate('/user/calendar');
+    navigate('/user/view-events');
   };
 
   const handleExportReports = () => {
     // Generate CSV report
-    const csvData = events.map(event => ({
+    const csvData = filteredEvents.map(event => ({
       Title: event.title,
-      Date: new Date(event.date).toLocaleDateString(),
+      Date: new Date(event.start_at).toLocaleDateString(),
+      Location: event.location || 'N/A',
       Status: event.status,
-      Attendees: event.attendees,
-      Revenue: event.revenue
+      RSVPs: event.rsvps_count || 0
     }));
 
-    const headers = ['Title', 'Date', 'Status', 'Attendees', 'Revenue'];
+    const headers = ['Title', 'Date', 'Location', 'Status', 'RSVPs'];
     const csvContent = [
       headers.join(','),
       ...csvData.map(row => headers.map(header => `"${(row as any)[header]}"`).join(','))
@@ -244,19 +259,34 @@ export default function EnhancedEventDashboard() {
     toast.success('Report exported successfully');
   };
 
-  const handleEditEvent = (event: Event) => {
-    navigate(`/user/events/edit/${event.id}`);
+  const handleViewEvent = (event: Event) => {
+    setSelectedEvent(event);
   };
 
-  const handleViewAttendees = (event: Event) => {
-    navigate(`/user/events/${event.id}/rsvps`);
+  const handleEditEvent = () => {
+    if (selectedEvent) {
+      navigate('/user/view-events'); // Will open in edit mode via the inline editing
+      setSelectedEvent(null);
+    }
   };
 
-  const filteredEvents = events.filter(event => {
-    const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterType === "all" || event.type === filterType;
-    return matchesSearch && matchesFilter;
-  });
+  const handleViewAttendees = () => {
+    if (selectedEvent) {
+      navigate('/user/rsvps', { state: { eventId: selectedEvent.id } });
+      setSelectedEvent(null);
+    }
+  };
+
+  const copyRSVPLink = async (eventId: number) => {
+    const rsvpUrl = `${window.location.origin}/rsvp/${eventId}`;
+    try {
+      await navigator.clipboard.writeText(rsvpUrl);
+      toast.success('RSVP link copied to clipboard!');
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      toast.error('Failed to copy RSVP link');
+    }
+  };
 
   if (loading) {
     return (
@@ -274,6 +304,7 @@ export default function EnhancedEventDashboard() {
       className="min-h-screen bg-cover bg-center bg-fixed"
       style={{ backgroundImage: `url(${dashboardBg})` }}
     >
+      <Toaster position="top-right" />
       {/* Semi-transparent overlay for better readability */}
       <div className="min-h-screen bg-black/40 backdrop-blur-sm p-6">
         <div className="max-w-7xl mx-auto">
@@ -316,28 +347,25 @@ export default function EnhancedEventDashboard() {
               icon={Calendar}
               label="Total Events"
               value={stats?.totalEvents || 0}
-              trend="+12% this month"
               color="bg-gradient-to-br from-blue-500 to-blue-600"
             />
             <StatCard
               icon={Users}
-              label="Total Attendees"
-              value={stats?.totalAttendees?.toLocaleString() || 0}
-              trend="+8% this month"
+              label="Total RSVPs"
+              value={stats?.totalRsvps || 0}
               color="bg-gradient-to-br from-green-500 to-green-600"
-            />
-            <StatCard
-              icon={DollarSign}
-              label="Total Revenue"
-              value={`₱${(stats?.totalRevenue || 0).toLocaleString()}`}
-              trend="+15% this month"
-              color="bg-gradient-to-br from-amber-500 to-orange-500"
             />
             <StatCard
               icon={TrendingUp}
               label="Upcoming Events"
               value={stats?.upcomingEvents || 0}
               color="bg-gradient-to-br from-purple-500 to-purple-600"
+            />
+            <StatCard
+              icon={DollarSign}
+              label="Approved Events"
+              value={stats?.approvedEvents || 0}
+              color="bg-gradient-to-br from-amber-500 to-orange-500"
             />
           </div>
 
@@ -363,11 +391,11 @@ export default function EnhancedEventDashboard() {
                       onChange={(e) => setFilterType(e.target.value)}
                       className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent appearance-none bg-white"
                     >
-                      <option value="all">All Types</option>
-                      <option value="wedding">Wedding</option>
-                      <option value="corporate">Corporate</option>
-                      <option value="birthday">Birthday</option>
-                      <option value="anniversary">Anniversary</option>
+                      <option value="all">All Status</option>
+                      <option value="approved">Approved</option>
+                      <option value="pending">Pending</option>
+                      <option value="draft">Draft</option>
+                      <option value="concluded">Concluded</option>
                     </select>
                   </div>
                 </div>
@@ -379,7 +407,7 @@ export default function EnhancedEventDashboard() {
                     <EventCard
                       key={event.id}
                       event={event}
-                      onViewDetails={setSelectedEvent}
+                      onViewDetails={handleViewEvent}
                     />
                   ))}
                 </div>
@@ -387,31 +415,79 @@ export default function EnhancedEventDashboard() {
                 {filteredEvents.length === 0 && (
                   <div className="text-center py-12">
                     <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No events found</p>
+                    <p className="text-gray-500 mb-4">
+                      {searchTerm || filterType !== "all" 
+                        ? "No events found matching your filters" 
+                        : "No events yet"}
+                    </p>
+                    {!searchTerm && filterType === "all" && (
+                      <button
+                        onClick={handleCreateEvent}
+                        className="px-6 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-semibold hover:from-amber-600 hover:to-orange-600 transition-all"
+                      >
+                        Create Your First Event
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Activity Feed */}
+            {/* Quick Actions Sidebar */}
             <div className="lg:col-span-1">
-              <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg border border-white/20">
-                <ActivityFeed activities={stats?.recentActivity || []} />
-              </div>
-              
-              {/* Quick Actions */}
-              <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 shadow-lg border border-white/20 mt-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
+              <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 shadow-lg border border-white/20">
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-amber-500" />
+                  Quick Actions
+                </h2>
                 <div className="space-y-3">
-                  <button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 rounded-lg font-medium hover:from-amber-600 hover:to-orange-600 transition-all shadow-md">
+                  <button
+                    onClick={handleCreateEvent}
+                    className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 rounded-lg font-medium hover:from-amber-600 hover:to-orange-600 transition-all shadow-md flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-5 h-5" />
                     Create New Event
                   </button>
-                  <button className="w-full bg-white border-2 border-amber-500 text-amber-600 py-3 rounded-lg font-medium hover:bg-amber-50 transition-all">
-                    View Calendar
+                  <button
+                    onClick={handleViewCalendar}
+                    className="w-full bg-white border-2 border-amber-500 text-amber-600 py-3 rounded-lg font-medium hover:bg-amber-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Calendar className="w-5 h-5" />
+                    View All Events
                   </button>
-                  <button className="w-full bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 transition-all">
+                  <button
+                    onClick={handleExportReports}
+                    className="w-full bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-5 h-5" />
                     Export Reports
                   </button>
+                  <button
+                    onClick={() => navigate('/user/rsvps')}
+                    className="w-full bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Users className="w-5 h-5" />
+                    Manage RSVPs
+                  </button>
+                </div>
+
+                {/* Recent Stats */}
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-3">Quick Stats</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Total Events</span>
+                      <span className="font-bold text-gray-900">{stats?.totalEvents || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Upcoming</span>
+                      <span className="font-bold text-purple-600">{stats?.upcomingEvents || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Total RSVPs</span>
+                      <span className="font-bold text-green-600">{stats?.totalRsvps || 0}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -434,38 +510,52 @@ export default function EnhancedEventDashboard() {
                   </button>
                 </div>
                 
-                <div className="space-y-4">
+                <div className="space-y-4 mb-6">
                   <div className="flex items-center gap-3">
                     <Calendar className="w-5 h-5 text-amber-500" />
                     <span className="font-medium">Date:</span>
-                    <span className="text-gray-600">{new Date(selectedEvent.date).toLocaleDateString()}</span>
+                    <span className="text-gray-600">{new Date(selectedEvent.start_at).toLocaleDateString()}</span>
                   </div>
+                  {selectedEvent.location && (
+                    <div className="flex items-center gap-3">
+                      <Calendar className="w-5 h-5 text-amber-500" />
+                      <span className="font-medium">Location:</span>
+                      <span className="text-gray-600">{selectedEvent.location}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-3">
                     <Users className="w-5 h-5 text-amber-500" />
-                    <span className="font-medium">Attendees:</span>
-                    <span className="text-gray-600">{selectedEvent.attendees}</span>
+                    <span className="font-medium">RSVPs:</span>
+                    <span className="text-gray-600">{selectedEvent.rsvps_count || 0}</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <DollarSign className="w-5 h-5 text-amber-500" />
-                    <span className="font-medium">Revenue:</span>
-                    <span className="text-gray-600">₱{selectedEvent.revenue.toLocaleString()}</span>
-                  </div>
+                  {selectedEvent.description && (
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                      <p className="text-gray-700">{selectedEvent.description}</p>
+                    </div>
+                  )}
                 </div>
 
-                <div className="mt-8 flex gap-3">
+                <div className="flex gap-3">
                   <button
-                    onClick={() => handleEditEvent(selectedEvent)}
+                    onClick={handleEditEvent}
                     className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 rounded-lg font-medium hover:from-amber-600 hover:to-orange-600 transition-all flex items-center justify-center gap-2"
                   >
                     <Edit className="w-4 h-4" />
                     Edit Event
                   </button>
                   <button
-                    onClick={() => handleViewAttendees(selectedEvent)}
+                    onClick={handleViewAttendees}
                     className="flex-1 bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
                   >
                     <Eye className="w-4 h-4" />
-                    View Attendees
+                    View RSVPs
+                  </button>
+                  <button
+                    onClick={() => copyRSVPLink(selectedEvent.id)}
+                    className="px-4 bg-purple-500 text-white py-3 rounded-lg font-medium hover:bg-purple-600 transition-all"
+                    title="Copy RSVP Link"
+                  >
+                    <ExternalLink className="w-5 h-5" />
                   </button>
                 </div>
               </div>
