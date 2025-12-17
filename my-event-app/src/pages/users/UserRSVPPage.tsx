@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Users, UserCheck, UserX, User, Download, Search, Filter, Eye, X } from "lucide-react";
+import { Users, UserCheck, UserX, User, Download, Search, Filter, Eye, X, Calendar } from "lucide-react";
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -7,12 +7,16 @@ interface RSVP {
   id: number;
   event_id: number;
   event?: {
+    id: number;
     title: string;
+    start_at: string;
+    location?: string;
   };
-  attendee_name: string;
-  email: string;
-  phone: string;
-  status: "yes" | "no" | "maybe";
+  guest_name?: string;
+  guest_email?: string;
+  guest_phone?: string;
+  response: "yes" | "no" | "maybe";
+  status?: "attending" | "not_attending" | "maybe";
   guests: number;
   reason_for_declining?: string;
   special_requests?: string;
@@ -29,37 +33,75 @@ export default function UserRSVPPage() {
   const [selectedRsvp, setSelectedRsvp] = useState<RSVP | null>(null);
 
   useEffect(() => {
-    const fetchRsvps = async () => {
-      try {
-        const response = await api.get('/rsvps');
-        setRsvps(response.data);
-        setFilteredRsvps(response.data);
-      } catch (error) {
-        console.error('Error fetching RSVPs:', error);
-        toast.error('Failed to load RSVPs');
-        setRsvps([]);
-        setFilteredRsvps([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchRsvps();
   }, []);
+
+  const fetchRsvps = async () => {
+    try {
+      // Fetch all events to get RSVP counts
+      const eventsResponse = await api.get('/events');
+      const events = eventsResponse.data;
+
+      // Fetch RSVPs for each event
+      const allRsvps: RSVP[] = [];
+      
+      for (const event of events) {
+        try {
+          const rsvpResponse = await api.get(`/events/${event.id}/attendees`);
+          const eventRsvps = rsvpResponse.data.map((rsvp: any) => ({
+            ...rsvp,
+            event: {
+              id: event.id,
+              title: event.title,
+              start_at: event.start_at,
+              location: event.location
+            }
+          }));
+          allRsvps.push(...eventRsvps);
+        } catch (err) {
+          console.log(`No RSVPs for event ${event.id}`);
+        }
+      }
+
+      setRsvps(allRsvps);
+      setFilteredRsvps(allRsvps);
+    } catch (error) {
+      console.error('Error fetching RSVPs:', error);
+      toast.error('Failed to load RSVPs');
+      setRsvps([]);
+      setFilteredRsvps([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     let filtered = rsvps;
 
     if (searchTerm) {
       filtered = filtered.filter(rsvp =>
-        rsvp.attendee_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        rsvp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        rsvp.guest_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        rsvp.guest_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         rsvp.event?.title?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     if (statusFilter !== "all") {
-      filtered = filtered.filter(rsvp => rsvp.status === statusFilter);
+      filtered = filtered.filter(rsvp => {
+        const response = rsvp.response;
+        const status = rsvp.status;
+        
+        if (statusFilter === "yes") {
+          return response === "yes" || status === "attending";
+        }
+        if (statusFilter === "no") {
+          return response === "no" || status === "not_attending";
+        }
+        if (statusFilter === "maybe") {
+          return response === "maybe" || status === "maybe";
+        }
+        return true;
+      });
     }
 
     if (eventFilter !== "all") {
@@ -69,35 +111,59 @@ export default function UserRSVPPage() {
     setFilteredRsvps(filtered);
   }, [rsvps, searchTerm, statusFilter, eventFilter]);
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (rsvp: RSVP) => {
+    // Determine the actual status
+    let displayStatus: 'yes' | 'no' | 'maybe' | 'attending' | 'not_attending' = 'maybe';
+    
+    if (rsvp.response === 'yes' || rsvp.status === 'attending') {
+      displayStatus = 'yes';
+    } else if (rsvp.response === 'no' || rsvp.status === 'not_attending') {
+      displayStatus = 'no';
+    } else if (rsvp.response === 'maybe' || rsvp.status === 'maybe') {
+      displayStatus = 'maybe';
+    }
+    
     const styles = {
       yes: "bg-green-100 text-green-800 border-green-300",
       no: "bg-red-100 text-red-800 border-red-300",
-      maybe: "bg-yellow-100 text-yellow-800 border-yellow-300"
+      maybe: "bg-yellow-100 text-yellow-800 border-yellow-300",
+      attending: "bg-green-100 text-green-800 border-green-300",
+      not_attending: "bg-red-100 text-red-800 border-red-300"
     };
 
     const icons = {
       yes: <UserCheck className="w-3 h-3" />,
       no: <UserX className="w-3 h-3" />,
-      maybe: <User className="w-3 h-3" />
+      maybe: <User className="w-3 h-3" />,
+      attending: <UserCheck className="w-3 h-3" />,
+      not_attending: <UserX className="w-3 h-3" />
+    };
+
+    const labels = {
+      yes: "Attending",
+      no: "Not Attending",
+      maybe: "Maybe",
+      attending: "Attending",
+      not_attending: "Not Attending"
     };
 
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-semibold border flex items-center gap-1 ${styles[status as keyof typeof styles]}`}>
-        {icons[status as keyof typeof icons]}
-        {status === 'yes' ? 'Attending' : status === 'no' ? 'Not Attending' : 'Maybe'}
+      <span className={`px-2 py-1 rounded-full text-xs font-semibold border flex items-center gap-1 ${styles[displayStatus]}`}>
+        {icons[displayStatus]}
+        {labels[displayStatus]}
       </span>
     );
   };
 
   const exportToCSV = () => {
-    const headers = ["Event", "Attendee Name", "Email", "Phone", "Status", "Guests", "Reason for Declining", "Special Requests", "RSVP Date"];
+    const headers = ["Event", "Event Date", "Attendee Name", "Email", "Phone", "Status", "Guests", "Reason for Declining", "Special Requests", "RSVP Date"];
     const csvData = filteredRsvps.map(rsvp => [
       rsvp.event?.title || 'N/A',
-      rsvp.attendee_name,
-      rsvp.email,
-      rsvp.phone,
-      rsvp.status,
+      rsvp.event?.start_at ? new Date(rsvp.event.start_at).toLocaleDateString() : 'N/A',
+      rsvp.guest_name || 'N/A',
+      rsvp.guest_email || 'N/A',
+      rsvp.guest_phone || 'N/A',
+      rsvp.response || rsvp.status || 'N/A',
       rsvp.guests || 0,
       rsvp.reason_for_declining || 'N/A',
       rsvp.special_requests || 'N/A',
@@ -129,10 +195,15 @@ export default function UserRSVPPage() {
 
   const stats = {
     total: filteredRsvps.length,
-    attending: filteredRsvps.filter(r => r.status === "yes").length,
-    notAttending: filteredRsvps.filter(r => r.status === "no").length,
-    maybe: filteredRsvps.filter(r => r.status === "maybe").length,
-    totalGuests: filteredRsvps.reduce((sum, r) => sum + (r.guests || 0), 0)
+    attending: filteredRsvps.filter(r => r.response === "yes" || r.status === "attending").length,
+    notAttending: filteredRsvps.filter(r => r.response === "no" || r.status === "not_attending").length,
+    maybe: filteredRsvps.filter(r => r.response === "maybe" || r.status === "maybe").length,
+    totalGuests: filteredRsvps.reduce((sum, r) => {
+      if (r.response === "yes" || r.status === "attending") {
+        return sum + (r.guests || 0);
+      }
+      return sum;
+    }, 0)
   };
 
   if (loading) {
@@ -240,8 +311,8 @@ export default function UserRSVPPage() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attendee</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attendee</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guests</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RSVP Date</th>
@@ -251,21 +322,29 @@ export default function UserRSVPPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredRsvps.map((rsvp) => (
                 <tr key={rsvp.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{rsvp.attendee_name}</div>
-                      <div className="text-sm text-gray-500">{rsvp.email}</div>
-                      <div className="text-sm text-gray-500">{rsvp.phone}</div>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-[#d4b885]" />
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{rsvp.event?.title || 'N/A'}</div>
+                        <div className="text-xs text-gray-500">
+                          {rsvp.event?.start_at ? new Date(rsvp.event.start_at).toLocaleDateString() : 'N/A'}
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{rsvp.event?.title || 'N/A'}</div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">{rsvp.guest_name || 'N/A'}</div>
+                      <div className="text-sm text-gray-500">{rsvp.guest_email || 'N/A'}</div>
+                      <div className="text-sm text-gray-500">{rsvp.guest_phone || 'N/A'}</div>
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(rsvp.status)}
+                    {getStatusBadge(rsvp)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {rsvp.status === 'yes' ? (rsvp.guests || 1) : '-'}
+                    {(rsvp.response === 'yes' || rsvp.status === 'attending') ? (rsvp.guests || 1) : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(rsvp.created_at).toLocaleDateString()}
@@ -301,7 +380,7 @@ export default function UserRSVPPage() {
             <div className="p-6">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">{selectedRsvp.attendee_name}</h2>
+                  <h2 className="text-2xl font-bold text-gray-900">{selectedRsvp.guest_name || 'Guest'}</h2>
                   <p className="text-gray-600 mt-1">RSVP Details</p>
                 </div>
                 <button
@@ -314,15 +393,35 @@ export default function UserRSVPPage() {
 
               <div className="space-y-4">
                 <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-900 mb-3">Event Information</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Event:</span>
+                      <span className="font-medium">{selectedRsvp.event?.title || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Date:</span>
+                      <span className="font-medium">
+                        {selectedRsvp.event?.start_at ? new Date(selectedRsvp.event.start_at).toLocaleDateString() : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Location:</span>
+                      <span className="font-medium">{selectedRsvp.event?.location || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="font-semibold text-gray-900 mb-3">Contact Information</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Email:</span>
-                      <span className="font-medium">{selectedRsvp.email}</span>
+                      <span className="font-medium">{selectedRsvp.guest_email || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Phone:</span>
-                      <span className="font-medium">{selectedRsvp.phone}</span>
+                      <span className="font-medium">{selectedRsvp.guest_phone || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
@@ -332,13 +431,9 @@ export default function UserRSVPPage() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Status:</span>
-                      {getStatusBadge(selectedRsvp.status)}
+                      {getStatusBadge(selectedRsvp)}
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Event:</span>
-                      <span className="font-medium">{selectedRsvp.event?.title || 'N/A'}</span>
-                    </div>
-                    {selectedRsvp.status === 'yes' && (
+                    {(selectedRsvp.response === 'yes' || selectedRsvp.status === 'attending') && (
                       <div className="flex justify-between">
                         <span className="text-gray-600">Number of Guests:</span>
                         <span className="font-medium">{selectedRsvp.guests || 1}</span>
@@ -351,14 +446,14 @@ export default function UserRSVPPage() {
                   </div>
                 </div>
 
-                {selectedRsvp.status === 'no' && selectedRsvp.reason_for_declining && (
+                {selectedRsvp.response === 'no' && selectedRsvp.reason_for_declining && (
                   <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
                     <h3 className="font-semibold text-red-900 mb-2">Reason for Declining</h3>
                     <p className="text-sm text-red-800">{selectedRsvp.reason_for_declining}</p>
                   </div>
                 )}
 
-                {(selectedRsvp.status === 'yes' || selectedRsvp.status === 'maybe') && selectedRsvp.special_requests && (
+                {(selectedRsvp.response === 'yes' || selectedRsvp.response === 'maybe') && selectedRsvp.special_requests && (
                   <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
                     <h3 className="font-semibold text-blue-900 mb-2">Special Requests</h3>
                     <p className="text-sm text-blue-800">{selectedRsvp.special_requests}</p>
