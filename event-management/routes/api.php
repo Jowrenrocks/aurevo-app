@@ -25,6 +25,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::get('auth/me', [AuthController::class, 'me']);
     Route::post('auth/logout', [AuthController::class, 'logout']);
+    
+    // Profile management (NEW)
+    Route::put('auth/update-profile', [ProfileController::class, 'updateProfile']);
+    Route::put('auth/change-password', [ProfileController::class, 'changePassword']);
 
     // Events
     Route::get('/events', [EventController::class, 'index']);
