@@ -6,10 +6,8 @@ import bg from "../assets/rsvp-bg.png";
 
 interface GuestInfo {
   fullName: string;
-  email: string;
   phone: string;
   response: 'yes' | 'no' | 'maybe' | '';
-  numberOfGuests: number;
   reasonForDeclining: string;
   dietaryRestrictions: string;
   message: string;
@@ -24,10 +22,8 @@ export default function PublicRSVPPage() {
   const [submitted, setSubmitted] = useState(false);
   const [guestInfo, setGuestInfo] = useState<GuestInfo>({
     fullName: "",
-    email: "",
     phone: "",
     response: '',
-    numberOfGuests: 1,
     reasonForDeclining: "",
     dietaryRestrictions: "",
     message: ""
@@ -59,7 +55,6 @@ export default function PublicRSVPPage() {
           theme: 'Event Theme',
           hosts: eventData.creator?.full_name || 'Event Organizer',
           description: eventData.description,
-          maxGuests: 5, // Default max guests
           backgroundImage: bg
         };
 
@@ -77,7 +72,6 @@ export default function PublicRSVPPage() {
           theme: "N/A",
           hosts: "N/A",
           description: "This event could not be loaded.",
-          maxGuests: 1,
           backgroundImage: bg
         };
         setEvent(mockEvent);
@@ -91,11 +85,11 @@ export default function PublicRSVPPage() {
     }
   }, [eventId]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setGuestInfo(prev => ({
       ...prev,
-      [name]: name === "numberOfGuests" ? parseInt(value) || 1 : value
+      [name]: value
     }));
   };
 
@@ -104,9 +98,7 @@ export default function PublicRSVPPage() {
       ...prev,
       response,
       // Clear reason if not declining
-      reasonForDeclining: response === 'no' ? prev.reasonForDeclining : '',
-      // Reset guests to 1 if not attending
-      numberOfGuests: response === 'no' ? 1 : prev.numberOfGuests
+      reasonForDeclining: response === 'no' ? prev.reasonForDeclining : ''
     }));
   };
 
@@ -141,12 +133,15 @@ export default function PublicRSVPPage() {
         specialRequests = parts.join('. ');
       }
 
+      // Generate a simple email from phone number (since email is removed)
+      const generatedEmail = `${guestInfo.phone.replace(/[^0-9]/g, '')}@guest.rsvp`;
+
       await api.post(`/events/${eventId}/rsvp-guest`, {
         name: guestInfo.fullName,
-        email: guestInfo.email,
+        email: generatedEmail, // Backend still needs email for unique constraint
         phone: guestInfo.phone,
         status: guestInfo.response,
-        guests: guestInfo.response === 'yes' ? guestInfo.numberOfGuests : 0,
+        guests: 1, // Default to 1 since we removed the number field
         reason_for_declining: guestInfo.response === 'no' ? guestInfo.reasonForDeclining : null,
         special_requests: specialRequests || null
       });
@@ -197,7 +192,7 @@ export default function PublicRSVPPage() {
     const responseMessages = {
       yes: {
         title: "RSVP Confirmed!",
-        message: `Thank you, ${guestInfo.fullName}! Your RSVP for ${guestInfo.numberOfGuests} ${guestInfo.numberOfGuests === 1 ? "guest" : "guests"} has been received.`,
+        message: `Thank you, ${guestInfo.fullName}! Your RSVP has been received.`,
         emoji: "🎉"
       },
       no: {
@@ -228,7 +223,7 @@ export default function PublicRSVPPage() {
           </p>
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
             <p className="text-sm text-gray-700">
-              A confirmation email has been sent to <strong>{guestInfo.email}</strong>
+              We have your contact number <strong>{guestInfo.phone}</strong> on file
             </p>
           </div>
           <p className="text-sm text-gray-500">
@@ -377,21 +372,6 @@ export default function PublicRSVPPage() {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Email Address *
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={guestInfo.email}
-                    onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                    placeholder="john@example.com"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Phone Number *
                   </label>
                   <input
@@ -404,28 +384,6 @@ export default function PublicRSVPPage() {
                     required
                   />
                 </div>
-
-                {/* Number of Guests - Only show if response is "yes" */}
-                {guestInfo.response === 'yes' && (
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Number of Guests *
-                    </label>
-                    <select
-                      name="numberOfGuests"
-                      value={guestInfo.numberOfGuests}
-                      onChange={handleChange}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                      required={guestInfo.response === 'yes'}
-                    >
-                      {[...Array(event.maxGuests || 5)].map((_, i) => (
-                        <option key={i + 1} value={i + 1}>
-                          {i + 1} {i === 0 ? "Guest" : "Guests"}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
               </div>
 
               {/* Additional Info - Only show if response is "yes" or "maybe" */}

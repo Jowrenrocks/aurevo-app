@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Calendar, MapPin, Users, Clock, Copy, CheckCircle, ExternalLink, Edit, Save, X, Trash2 } from "lucide-react";
-import api from '../../utils/api';
+import api from "../../utils/api";
 import toast, { Toaster } from 'react-hot-toast';
 
 interface Event {
@@ -29,7 +29,8 @@ export default function ViewEventsPage() {
     description: '',
     start_at: '',
     end_at: '',
-    location: ''
+    location: '',
+    status: 'pending' as 'draft' | 'pending' | 'approved' | 'declined' | 'concluded'
   });
 
   useEffect(() => {
@@ -123,7 +124,8 @@ export default function ViewEventsPage() {
       description: event.description || '',
       start_at: formatDateTimeForInput(event.start_at),
       end_at: event.end_at ? formatDateTimeForInput(event.end_at) : '',
-      location: event.location || ''
+      location: event.location || '',
+      status: event.status as 'draft' | 'pending' | 'approved' | 'declined' | 'concluded'
     });
   };
 
@@ -134,7 +136,8 @@ export default function ViewEventsPage() {
       description: '',
       start_at: '',
       end_at: '',
-      location: ''
+      location: '',
+      status: 'pending'
     });
   };
 
@@ -145,7 +148,8 @@ export default function ViewEventsPage() {
         description: editForm.description,
         start_at: editForm.start_at,
         end_at: editForm.end_at || null,
-        location: editForm.location
+        location: editForm.location,
+        status: editForm.status
       };
 
       await api.put(`/events/${eventId}`, updateData);
@@ -310,7 +314,31 @@ export default function ViewEventsPage() {
                         value={editForm.location}
                         onChange={(e) => setEditForm({...editForm, location: e.target.value})}
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#d4b885] focus:border-transparent"
+                        placeholder="Enter event location"
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Event Status *</label>
+                      <select
+                        value={editForm.status}
+                        onChange={(e) => setEditForm({...editForm, status: e.target.value as any})}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#d4b885] focus:border-transparent"
+                        required
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="declined">Declined</option>
+                        <option value="concluded">Concluded</option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {editForm.status === 'draft' && 'Event is saved but not yet submitted for approval'}
+                        {editForm.status === 'pending' && 'Event is awaiting approval'}
+                        {editForm.status === 'approved' && 'Event is approved and visible to guests'}
+                        {editForm.status === 'declined' && 'Event has been declined'}
+                        {editForm.status === 'concluded' && 'Event has been completed'}
+                      </p>
                     </div>
 
                     <div className="flex gap-3 pt-4">
