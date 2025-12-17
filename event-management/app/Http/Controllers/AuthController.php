@@ -155,14 +155,16 @@ class AuthController extends Controller
     {
         try {
             $user = $request->user()->load('role');
-            
+
             return response()->json([
-                'user' => [
-                    'id' => $user->id,
-                    'full_name' => $user->full_name,
-                    'email' => $user->email,
-                    'role' => $user->role->name,
+                'id' => $user->id,
+                'full_name' => $user->full_name,
+                'email' => $user->email,
+                'role' => [
+                    'id' => $user->role->id,
+                    'name' => $user->role->name,
                 ],
+                'created_at' => $user->created_at,
             ], 200);
         } catch (\Exception $e) {
             Log::error('Get user error: ' . $e->getMessage());

@@ -66,12 +66,14 @@ export default function ProfilePage() {
       const response = await api.get('/auth/me');
       setProfile(response.data);
       setEditForm({
-        full_name: response.data.full_name,
-        email: response.data.email
+        full_name: response.data.full_name || '',
+        email: response.data.email || ''
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching profile:', error);
-      toast.error('Failed to load profile data');
+      const errorMessage = error.response?.data?.error || 'Failed to load profile data';
+      toast.error(errorMessage);
+      setProfile(null);
     } finally {
       setLoading(false);
     }
@@ -175,6 +177,9 @@ export default function ProfilePage() {
   };
 
   const getInitials = (name: string) => {
+    if (!name || typeof name !== 'string') {
+      return 'U'; // Default to 'U' for User
+    }
     return name
       .split(' ')
       .map(n => n[0])
