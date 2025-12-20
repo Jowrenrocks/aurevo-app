@@ -6,7 +6,7 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\RsvpController;
 use App\Http\Controllers\GuestRsvpController;
 use App\Http\Controllers\ProfileController;
-
+use App\Http\Controllers\UserProfileController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -49,4 +49,18 @@ Route::middleware('auth:sanctum')->group(function () {
     // RSVPs (authenticated users)
     Route::post('/events/{eventId}/rsvp', [RsvpController::class, 'respond']);
     Route::get('/rsvps', [RsvpController::class, 'index']);
+
+    // Profile Management
+    Route::get('/user/profile', [ProfileController::class, 'getProfile']);
+    Route::post('/user/profile', [ProfileController::class, 'updateProfile']);
+    
+    // Password Management
+    Route::post('/user/change-password', [ProfileController::class, 'changePassword']);
+    
+    // Admin Notification Preferences (admin only)
+    Route::get('/admin/notification-preferences', [ProfileController::class, 'getNotificationPreferences']);
+    Route::post('/admin/notification-preferences', [ProfileController::class, 'updateNotificationPreferences']);
+    
+    // Account Deletion (optional)
+    Route::delete('/user/account', [ProfileController::class, 'deleteAccount']);
 });
