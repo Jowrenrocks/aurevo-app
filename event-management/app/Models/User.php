@@ -11,13 +11,8 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
-        'name',
+        'full_name',  // ✅ Make sure this is here
         'email',
         'password',
         'phone',
@@ -28,45 +23,32 @@ class User extends Authenticatable
         'role_id',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
 
-    /**
-     * Get the user's preferences
-     */
+    // ✅ ADD THIS RELATIONSHIP
+    public function role()
+    {
+        return $this->belongsTo(Role::class);
+    }
+
     public function preferences()
     {
         return $this->hasOne(UserPreference::class);
     }
 
-    /**
-     * Get the events created by this user
-     */
     public function events()
     {
         return $this->hasMany(Event::class, 'user_id');
     }
 
-    /**
-     * Get the RSVPs made by this user
-     */
     public function rsvps()
     {
         return $this->hasMany(Rsvp::class);

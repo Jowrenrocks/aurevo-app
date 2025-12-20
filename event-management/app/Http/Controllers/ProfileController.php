@@ -8,7 +8,7 @@ use Illuminate\Validation\ValidationException;
 use App\Models\User;
 use App\Models\UserPreference;
 
-class UserProfileController extends Controller
+class ProfileController extends Controller
 {
     /**
      * Get current user profile
@@ -16,16 +16,17 @@ class UserProfileController extends Controller
     public function getProfile(Request $request)
     {
         $user = auth()->user();
+        $user->load('role'); // Load the role relationship
         
         return response()->json([
             'id' => $user->id,
-            'name' => $user->name,
+            'name' => $user->full_name,  // ✅ Changed from 'name' to 'full_name'
             'email' => $user->email,
-            'phone' => $user->phone,
-            'address' => $user->address,
-            'city' => $user->city,
-            'country' => $user->country,
-            'bio' => $user->bio,
+            'phone' => $user->phone ?? null,
+            'address' => $user->address ?? null,
+            'city' => $user->city ?? null,
+            'country' => $user->country ?? null,
+            'bio' => $user->bio ?? null,
             'role_id' => $user->role_id,
             'created_at' => $user->created_at
         ]);
@@ -39,7 +40,7 @@ class UserProfileController extends Controller
         $user = auth()->user();
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255',  // Frontend sends 'name'
             'email' => 'required|email|unique:users,email,' . $user->id,
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:255',
@@ -48,12 +49,17 @@ class UserProfileController extends Controller
             'bio' => 'nullable|string|max:500'
         ]);
 
+        // Map 'name' to 'full_name' for database
+        $updateData = $validated;
+        $updateData['full_name'] = $validated['name'];  // ✅ Map to full_name
+        unset($updateData['name']);
+
         // Update user
-        $user->update($validated);
+        $user->update($updateData);
 
         return response()->json([
             'id' => $user->id,
-            'name' => $user->name,
+            'name' => $user->full_name,  // ✅ Return as 'name' for frontend
             'email' => $user->email,
             'phone' => $user->phone,
             'address' => $user->address,
