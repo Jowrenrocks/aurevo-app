@@ -25,7 +25,7 @@ class EventController extends Controller {
     return Event::with('creator','rsvps.user')->findOrFail($id); 
   }
 
-  // Create new event
+  // Create new event (no approval needed - auto-active)
   public function store(Request $r){
     $r->validate([
       'title'=>'required|string|max:255',
@@ -39,12 +39,11 @@ class EventController extends Controller {
     
     $user = auth()->user();
     
-    // Determine status based on user role
-    $status = ($user->role_id === 1) ? 'approved' : 'pending';
-    
+    // All events are active by default (no approval needed)
+    // Status: draft, pending (active), flagged, concluded
     $ev = Event::create(array_merge(
       $r->only(['title','description','start_at','end_at','location','host_name','host_contact']), 
-      ['user_id'=>$user->id, 'status'=>$status]
+      ['user_id'=>$user->id, 'status'=>'pending'] // "pending" means active/live
     ));
     
     return response()->json($ev->load('creator'),201);
@@ -68,10 +67,18 @@ class EventController extends Controller {
       'location'=>'nullable|string|max:255',
       'host_name'=>'nullable|string|max:255',
       'host_contact'=>'nullable|string|max:255',
-      'status'=>'sometimes|in:draft,pending,approved,declined,concluded'
+      'status'=>'sometimes|in:draft,pending,flagged,concluded',
+      'admin_notes'=>'nullable|string' // For admin to flag suspicious events
     ]);
     
     $ev->update($validated);
+    
+    // If admin flagged the event, optionally notify the creator
+    if (isset($validated['status']) && $validated['status'] === 'flagged' && $user->role_id === 1) {
+      // TODO: Send notification to event creator
+      // You can implement email notification here
+    }
+    
     return response()->json($ev->load('creator'));
   }
 
@@ -83,6 +90,12 @@ class EventController extends Controller {
     // Check if user can delete (is admin or is creator)
     if ($user->role_id !== 1 && $ev->user_id !== $user->id) {
       return response()->json(['error' => 'Unauthorized'], 403);
+    }
+    
+    // Log admin deletion reason (optional)
+    if ($user->role_id === 1) {
+      // TODO: Log admin action for audit trail
+      // \Log::info("Admin {$user->id} deleted event {$ev->id}");
     }
     
     $ev->delete();
@@ -98,7 +111,7 @@ class EventController extends Controller {
     return response()->json($ev->rsvps);
   }
   
-  // Admin: Get all events from all users
+  // Admin: Get all events from all users (for monitoring)
   public function adminIndex(Request $request){
     $user = auth()->user();
     
@@ -135,6 +148,7 @@ class EventController extends Controller {
       'total_events' => Event::count(),
       'upcoming_events' => Event::where('start_at', '>', now())->count(),
       'completed_events' => Event::where('start_at', '<=', now())->count(),
+      'flagged_events' => Event::where('status', 'flagged')->count(),
       'total_users' => User::where('role_id', 2)->count(),
       'total_rsvps' => Rsvp::count(),
       'events_by_status' => Event::selectRaw('status, count(*) as count')
@@ -150,7 +164,12 @@ class EventController extends Controller {
         'yes' => Rsvp::where('response', 'yes')->count(),
         'no' => Rsvp::where('response', 'no')->count(),
         'maybe' => Rsvp::where('response', 'maybe')->count()
-      ]
+      ],
+      'flagged_events_list' => Event::with('creator')
+        ->where('status', 'flagged')
+        ->withCount('rsvps')
+        ->orderBy('updated_at', 'desc')
+        ->get()
     ];
     
     return response()->json($stats);

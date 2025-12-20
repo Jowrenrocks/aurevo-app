@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { 
   Calendar, MapPin, Users, Clock, Edit, Trash2, Eye, Search, 
-  Filter, RefreshCw, User as UserIcon, CheckCircle, XCircle,
-  AlertCircle, Loader2, ExternalLink, Copy
+  Filter, RefreshCw, User as UserIcon, AlertTriangle,
+  Loader2, AlertCircle, ExternalLink, Copy, Ban
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from 'react-hot-toast';
@@ -20,6 +20,8 @@ interface Event {
     full_name: string;
     email: string;
   };
+  host_name?: string;
+  host_contact?: string;
   rsvps_count: number;
   status: string;
   created_at: string;
@@ -53,7 +55,7 @@ export default function AdminViewEventsPage() {
       setLoading(true);
       setError(null);
       
-      // Fetch all events - try admin endpoint first, fallback to regular
+      // Fetch all events
       let eventsResponse;
       try {
         eventsResponse = await api.get('/admin/events');
@@ -64,7 +66,7 @@ export default function AdminViewEventsPage() {
       
       setEvents(eventsResponse.data);
       
-      // Fetch all users - try admin endpoint first
+      // Fetch all users
       try {
         const usersResponse = await api.get('/admin/users');
         setUsers(usersResponse.data);
@@ -93,30 +95,52 @@ export default function AdminViewEventsPage() {
   };
 
   const handleDelete = async (id: number, eventTitle: string) => {
-    if (!window.confirm(`Are you sure you want to delete "${eventTitle}"? This action cannot be undone.`)) {
+    const reason = window.prompt(
+      `⚠️ ADMIN INTERVENTION\n\nYou are about to delete "${eventTitle}".\n\nPlease provide a reason for deletion (this will be logged):`
+    );
+    
+    if (!reason) {
+      toast.error('Deletion cancelled - reason required');
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete "${eventTitle}"?\n\nReason: ${reason}\n\nThis action cannot be undone.`)) {
       return;
     }
 
     const loadingToast = toast.loading('Deleting event...');
     try {
       await api.delete(`/events/${id}`);
-      toast.success('Event deleted successfully', { id: loadingToast });
-      loadData(); // Reload data
+      toast.success(`Event deleted. Reason logged: ${reason}`, { id: loadingToast });
+      loadData();
     } catch (error: any) {
       console.error('Error deleting event:', error);
       toast.error(error.response?.data?.message || 'Failed to delete event', { id: loadingToast });
     }
   };
 
-  const handleStatusChange = async (id: number, newStatus: string, eventTitle: string) => {
-    const loadingToast = toast.loading(`Updating status to ${newStatus}...`);
+  const handleSuspiciousFlag = async (id: number, eventTitle: string) => {
+    const notes = window.prompt(
+      `🚩 FLAG AS SUSPICIOUS\n\nEvent: "${eventTitle}"\n\nPlease provide details about why this event is suspicious:`
+    );
+    
+    if (!notes) {
+      toast.error('Flag cancelled - details required');
+      return;
+    }
+
+    const loadingToast = toast.loading('Flagging event as suspicious...');
     try {
-      await api.put(`/events/${id}`, { status: newStatus });
-      toast.success(`"${eventTitle}" status changed to ${newStatus}`, { id: loadingToast });
-      loadData(); // Reload data
+      // You can add a status or notes field to track this
+      await api.put(`/events/${id}`, { 
+        status: 'flagged',
+        admin_notes: notes 
+      });
+      toast.success(`Event flagged as suspicious. Creator will be notified.`, { id: loadingToast });
+      loadData();
     } catch (error: any) {
-      console.error('Error updating status:', error);
-      toast.error(error.response?.data?.message || 'Failed to update event status', { id: loadingToast });
+      console.error('Error flagging event:', error);
+      toast.error(error.response?.data?.message || 'Failed to flag event', { id: loadingToast });
     }
   };
 
@@ -127,7 +151,6 @@ export default function AdminViewEventsPage() {
   };
 
   const filteredEvents = events.filter(event => {
-    // Tab filter
     const eventDate = new Date(event.start_at);
     const now = new Date();
     const isUpcoming = eventDate > now;
@@ -136,16 +159,13 @@ export default function AdminViewEventsPage() {
     if (tab === "upcoming") tabMatch = isUpcoming;
     if (tab === "completed") tabMatch = !isUpcoming;
 
-    // Search filter
     const searchMatch = searchTerm === "" || 
       event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       event.creator?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      event.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.host_name?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Status filter
     const statusMatch = statusFilter === "all" || event.status === statusFilter;
-
-    // User filter
     const userMatch = userFilter === "all" || event.user_id.toString() === userFilter;
 
     return tabMatch && searchMatch && statusMatch && userMatch;
@@ -189,17 +209,17 @@ export default function AdminViewEventsPage() {
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       draft: { bg: "bg-gray-100", text: "text-gray-800", border: "border-gray-300" },
-      pending: { bg: "bg-yellow-100", text: "text-yellow-800", border: "border-yellow-300" },
+      pending: { bg: "bg-blue-100", text: "text-blue-800", border: "border-blue-300" },
       approved: { bg: "bg-green-100", text: "text-green-800", border: "border-green-300" },
-      declined: { bg: "bg-red-100", text: "text-red-800", border: "border-red-300" },
-      concluded: { bg: "bg-blue-100", text: "text-blue-800", border: "border-blue-300" }
+      flagged: { bg: "bg-red-100", text: "text-red-800", border: "border-red-300" },
+      concluded: { bg: "bg-purple-100", text: "text-purple-800", border: "border-purple-300" }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
 
     return (
       <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${config.bg} ${config.text} ${config.border}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {status === 'flagged' ? '🚩 Flagged' : status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
   };
@@ -235,6 +255,7 @@ export default function AdminViewEventsPage() {
 
   const upcomingCount = events.filter(e => new Date(e.start_at) > new Date()).length;
   const completedCount = events.filter(e => new Date(e.start_at) <= new Date()).length;
+  const flaggedCount = events.filter(e => e.status === 'flagged').length;
 
   return (
     <div className="p-8 bg-[url('/src/assets/dashboard-bg.png')] bg-cover min-h-screen">
@@ -244,8 +265,14 @@ export default function AdminViewEventsPage() {
       <div className="bg-[#d4b885] p-6 rounded-2xl mb-6 shadow-lg">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h2 className="text-3xl font-bold text-[#3b2a13]">ALL EVENTS</h2>
-            <p className="text-sm text-[#3b2a13] mt-1">Monitor and manage all events from all users</p>
+            <h2 className="text-3xl font-bold text-[#3b2a13]">EVENT MONITORING</h2>
+            <p className="text-sm text-[#3b2a13] mt-1">Monitor all user events and intervene when necessary</p>
+            {flaggedCount > 0 && (
+              <div className="mt-2 inline-flex items-center gap-2 bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-semibold">
+                <AlertTriangle className="w-4 h-4" />
+                {flaggedCount} Flagged Event{flaggedCount !== 1 ? 's' : ''}
+              </div>
+            )}
           </div>
           <div className="flex gap-3">
             <button
@@ -274,7 +301,7 @@ export default function AdminViewEventsPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search events or creators..."
+              placeholder="Search events, creators, hosts..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#d4b885] focus:border-transparent"
@@ -291,9 +318,8 @@ export default function AdminViewEventsPage() {
             >
               <option value="all">All Status</option>
               <option value="draft">Draft</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="declined">Declined</option>
+              <option value="pending">Active</option>
+              <option value="flagged">🚩 Flagged</option>
               <option value="concluded">Concluded</option>
             </select>
           </div>
@@ -365,21 +391,33 @@ export default function AdminViewEventsPage() {
             filteredEvents.map((event) => (
               <div
                 key={event.id}
-                className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-all"
+                className={`bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-all ${
+                  event.status === 'flagged' ? 'border-2 border-red-400' : ''
+                }`}
               >
                 <div className="flex flex-col lg:flex-row justify-between gap-4">
                   <div className="flex-1">
                     {/* Header */}
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <h3 className="text-2xl font-bold text-[#3b2a13] mb-2">
-                          {event.title}
-                        </h3>
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="text-2xl font-bold text-[#3b2a13]">
+                            {event.title}
+                          </h3>
+                          {event.status === 'flagged' && (
+                            <AlertTriangle className="w-6 h-6 text-red-500" />
+                          )}
+                        </div>
                         <div className="flex items-center gap-3 flex-wrap">
                           <p className="text-gray-600 flex items-center gap-1">
                             <UserIcon className="w-4 h-4" />
                             Created by <span className="font-semibold">{event.creator?.full_name || 'Unknown'}</span>
                           </p>
+                          {event.host_name && (
+                            <p className="text-gray-600 flex items-center gap-1">
+                              | Host: <span className="font-semibold">{event.host_name}</span>
+                            </p>
+                          )}
                           {getStatusBadge(event.status)}
                         </div>
                       </div>
@@ -415,11 +453,11 @@ export default function AdminViewEventsPage() {
                     {/* Action Buttons */}
                     <div className="flex flex-wrap gap-2">
                       <button
-                        onClick={() => navigate(`/admin/edit-event/${event.id}`)}
+                        onClick={() => setSelectedEvent(event)}
                         className="px-3 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors flex items-center gap-2"
                       >
-                        <Edit className="w-4 h-4" />
-                        Edit
+                        <Eye className="w-4 h-4" />
+                        View Details
                       </button>
                       
                       <button
@@ -439,41 +477,24 @@ export default function AdminViewEventsPage() {
                       </button>
 
                       <button
-                        onClick={() => setSelectedEvent(event)}
-                        className="px-3 py-2 bg-teal-500 text-white rounded-lg text-sm font-medium hover:bg-teal-600 transition-colors flex items-center gap-2"
+                        onClick={() => navigate(`/admin/edit-event/${event.id}`)}
+                        className="px-3 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors flex items-center gap-2"
                       >
-                        <Eye className="w-4 h-4" />
-                        View Details
+                        <Edit className="w-4 h-4" />
+                        Edit
                       </button>
 
-                      {event.status === 'pending' && (
-                        <>
-                          <button
-                            onClick={() => handleStatusChange(event.id, 'approved', event.title)}
-                            className="px-3 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors flex items-center gap-2"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleStatusChange(event.id, 'declined', event.title)}
-                            className="px-3 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors flex items-center gap-2"
-                          >
-                            <XCircle className="w-4 h-4" />
-                            Decline
-                          </button>
-                        </>
-                      )}
-
-                      {event.status === 'approved' && new Date(event.start_at) <= new Date() && (
+                      {/* Admin Intervention Actions */}
+                      {event.status !== 'flagged' && (
                         <button
-                          onClick={() => handleStatusChange(event.id, 'concluded', event.title)}
-                          className="px-3 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+                          onClick={() => handleSuspiciousFlag(event.id, event.title)}
+                          className="px-3 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors flex items-center gap-2"
                         >
-                          Mark as Concluded
+                          <AlertTriangle className="w-4 h-4" />
+                          Flag as Suspicious
                         </button>
                       )}
-                      
+
                       <button
                         onClick={() => handleDelete(event.id, event.title)}
                         className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors flex items-center gap-2 ml-auto"
@@ -497,14 +518,6 @@ export default function AdminViewEventsPage() {
                   ? "Try adjusting your filters"
                   : "No events have been created yet"}
               </p>
-              {!searchTerm && statusFilter === 'all' && userFilter === 'all' && (
-                <button
-                  onClick={() => navigate('/admin/create-event')}
-                  className="px-6 py-3 bg-[#d4b885] text-[#3b2a13] rounded-lg font-semibold hover:bg-[#c4b184] transition-colors"
-                >
-                  Create First Event
-                </button>
-              )}
             </div>
           )}
         </div>
@@ -522,7 +535,15 @@ export default function AdminViewEventsPage() {
           >
             <div className="p-6">
               <div className="flex justify-between items-start mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">{selectedEvent.title}</h2>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">{selectedEvent.title}</h2>
+                  {selectedEvent.status === 'flagged' && (
+                    <div className="flex items-center gap-2 text-red-600 mt-2">
+                      <AlertTriangle className="w-5 h-5" />
+                      <span className="font-semibold">This event has been flagged</span>
+                    </div>
+                  )}
+                </div>
                 <button
                   onClick={() => setSelectedEvent(null)}
                   className="text-gray-400 hover:text-gray-600 text-2xl"
@@ -569,17 +590,32 @@ export default function AdminViewEventsPage() {
                     <p className="text-xs text-gray-600 mb-1">Creator Email</p>
                     <p className="font-medium text-sm">{selectedEvent.creator?.email || 'N/A'}</p>
                   </div>
+                  {selectedEvent.host_name && (
+                    <>
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Host Name</p>
+                        <p className="font-medium">{selectedEvent.host_name}</p>
+                      </div>
+                      {selectedEvent.host_contact && (
+                        <div>
+                          <p className="text-xs text-gray-600 mb-1">Host Contact</p>
+                          <p className="font-medium">{selectedEvent.host_contact}</p>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
 
                 <div className="flex gap-3 pt-4">
                   <button
                     onClick={() => {
-                      navigate(`/admin/edit-event/${selectedEvent.id}`);
                       setSelectedEvent(null);
+                      handleSuspiciousFlag(selectedEvent.id, selectedEvent.title);
                     }}
-                    className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
+                    className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
                   >
-                    Edit Event
+                    <AlertTriangle className="w-4 h-4" />
+                    Flag as Suspicious
                   </button>
                   <button
                     onClick={() => setSelectedEvent(null)}

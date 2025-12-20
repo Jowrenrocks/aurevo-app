@@ -18,7 +18,8 @@ class Event extends Model
         'host_name',
         'host_contact',
         'user_id',
-        'status'
+        'status',
+        'admin_notes'
     ];
 
     protected $casts = [
