@@ -87,10 +87,10 @@ function StepIndicator({ currentStep }: StepIndicatorProps) {
               <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
                 isCompleted ? 'bg-green-500' : isCurrent ? 'bg-amber-500' : 'bg-gray-300'
               }`}>
-                <Icon className="w-6 h-6 text-white" />
+                <Icon className="w-6 h-6 text-black" />
               </div>
               <span className={`text-xs mt-2 font-medium ${
-                isCurrent ? 'text-amber-600' : 'text-gray-600'
+                isCurrent ? 'text-amber-600' : 'text-black-600'
               }`}>
                 {step.title}
               </span>

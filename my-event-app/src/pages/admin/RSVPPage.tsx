@@ -1,123 +1,160 @@
 import { useState, useEffect } from "react";
-import { Users, UserCheck, UserX, User, Download, Search, Filter } from "lucide-react";
+import { Users, UserCheck, UserX, User, Download, Search, Filter, Eye, X, Calendar, Mail, Phone, MessageSquare, RefreshCw, Loader2, AlertCircle } from "lucide-react";
+import api from '../../utils/api';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface RSVP {
   id: number;
-  eventId: number;
-  eventTitle: string;
-  attendeeName: string;
-  email: string;
-  phone: string;
-  status: "yes" | "no" | "maybe";
+  event_id: number;
+  event?: {
+    id: number;
+    title: string;
+    start_at: string;
+    location?: string;
+    creator?: {
+      full_name: string;
+    };
+    host_name?: string;
+  };
+  user_id?: number;
+  user?: {
+    full_name: string;
+    email: string;
+  };
+  guest_name?: string;
+  guest_email?: string;
+  guest_phone?: string;
+  response: "yes" | "no" | "maybe";
+  status?: "attending" | "not_attending" | "maybe";
   guests: number;
-  specialRequests: string;
-  rsvpDate: string;
+  reason_for_declining?: string;
+  special_requests?: string;
+  created_at: string;
 }
 
-export default function RSVPPage() {
+export default function AdminRSVPPage() {
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
   const [filteredRsvps, setFilteredRsvps] = useState<RSVP[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [eventFilter, setEventFilter] = useState<string>("all");
+  const [selectedRsvp, setSelectedRsvp] = useState<RSVP | null>(null);
 
   useEffect(() => {
-    // Mock data - replace with API calls
-    const mockRsvps: RSVP[] = [
-      {
-        id: 1,
-        eventId: 1,
-        eventTitle: "Corporate Gala 2025",
-        attendeeName: "John Smith",
-        email: "john.smith@company.com",
-        phone: "+63 912 345 6789",
-        status: "yes" as const,
-        guests: 2,
-        specialRequests: "Vegetarian meal for one guest",
-        rsvpDate: "2025-11-10T14:30:00Z"
-      },
-      {
-        id: 2,
-        eventId: 1,
-        eventTitle: "Corporate Gala 2025",
-        attendeeName: "Maria Garcia",
-        email: "maria.garcia@email.com",
-        phone: "+63 923 456 7890",
-        status: "yes" as const,
-        guests: 1,
-        specialRequests: "",
-        rsvpDate: "2025-11-09T16:45:00Z"
-      },
-      {
-        id: 3,
-        eventId: 2,
-        eventTitle: "Wedding - Smith & Jones",
-        attendeeName: "Robert Johnson",
-        email: "robert.j@email.com",
-        phone: "+63 934 567 8901",
-        status: "maybe" as const,
-        guests: 3,
-        specialRequests: "Need high chair for toddler",
-        rsvpDate: "2025-11-08T11:20:00Z"
-      },
-      {
-        id: 4,
-        eventId: 3,
-        eventTitle: "Birthday Celebration",
-        attendeeName: "Sarah Wilson",
-        email: "sarah.w@email.com",
-        phone: "+63 945 678 9012",
-        status: "no" as const,
-        guests: 1,
-        specialRequests: "",
-        rsvpDate: "2025-11-07T09:15:00Z"
-      },
-      {
-        id: 5,
-        eventId: 2,
-        eventTitle: "Wedding - Smith & Jones",
-        attendeeName: "David Brown",
-        email: "david.brown@email.com",
-        phone: "+63 956 789 0123",
-        status: "yes" as const,
-        guests: 2,
-        specialRequests: "Allergic to nuts",
-        rsvpDate: "2025-11-06T13:40:00Z"
-      }
-    ];
-
-    setRsvps(mockRsvps);
-    setFilteredRsvps(mockRsvps);
-    setLoading(false);
+    fetchRsvps();
   }, []);
+
+  const fetchRsvps = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch all events (admin can see all events)
+      const eventsResponse = await api.get('/admin/events');
+      const events = eventsResponse.data;
+
+      // Fetch RSVPs for each event
+      const allRsvps: RSVP[] = [];
+      
+      for (const event of events) {
+        try {
+          const rsvpResponse = await api.get(`/events/${event.id}/attendees`);
+          const eventRsvps = rsvpResponse.data.map((rsvp: any) => ({
+            ...rsvp,
+            event: {
+              id: event.id,
+              title: event.title,
+              start_at: event.start_at,
+              location: event.location,
+              creator: event.creator,
+              host_name: event.host_name
+            }
+          }));
+          allRsvps.push(...eventRsvps);
+        } catch (err) {
+          console.log(`No RSVPs for event ${event.id}`);
+        }
+      }
+
+      setRsvps(allRsvps);
+      setFilteredRsvps(allRsvps);
+      toast.success('RSVPs loaded successfully');
+    } catch (error: any) {
+      console.error('Error fetching RSVPs:', error);
+      toast.error('Failed to load RSVPs');
+      setRsvps([]);
+      setFilteredRsvps([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    toast.promise(
+      fetchRsvps(),
+      {
+        loading: 'Refreshing RSVPs...',
+        success: 'RSVPs refreshed successfully',
+        error: 'Failed to refresh RSVPs'
+      }
+    );
+  };
 
   useEffect(() => {
     let filtered = rsvps;
 
-    // Apply search filter
     if (searchTerm) {
-      filtered = filtered.filter(rsvp =>
-        rsvp.attendeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        rsvp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        rsvp.eventTitle.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      filtered = filtered.filter(rsvp => {
+        const attendeeName = rsvp.guest_name || rsvp.user?.full_name || '';
+        const attendeeEmail = rsvp.guest_email || rsvp.user?.email || '';
+        const eventTitle = rsvp.event?.title || '';
+        const hostName = rsvp.event?.host_name || rsvp.event?.creator?.full_name || '';
+        
+        return (
+          attendeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          attendeeEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          eventTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          hostName.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      });
     }
 
-    // Apply status filter
     if (statusFilter !== "all") {
-      filtered = filtered.filter(rsvp => rsvp.status === statusFilter);
+      filtered = filtered.filter(rsvp => {
+        const response = rsvp.response;
+        const status = rsvp.status;
+        
+        if (statusFilter === "yes") {
+          return response === "yes" || status === "attending";
+        }
+        if (statusFilter === "no") {
+          return response === "no" || status === "not_attending";
+        }
+        if (statusFilter === "maybe") {
+          return response === "maybe" || status === "maybe";
+        }
+        return true;
+      });
     }
 
-    // Apply event filter
     if (eventFilter !== "all") {
-      filtered = filtered.filter(rsvp => rsvp.eventId.toString() === eventFilter);
+      filtered = filtered.filter(rsvp => rsvp.event_id.toString() === eventFilter);
     }
 
     setFilteredRsvps(filtered);
   }, [rsvps, searchTerm, statusFilter, eventFilter]);
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (rsvp: RSVP) => {
+    let displayStatus: 'yes' | 'no' | 'maybe' = 'maybe';
+    
+    if (rsvp.response === 'yes' || rsvp.status === 'attending') {
+      displayStatus = 'yes';
+    } else if (rsvp.response === 'no' || rsvp.status === 'not_attending') {
+      displayStatus = 'no';
+    } else if (rsvp.response === 'maybe' || rsvp.status === 'maybe') {
+      displayStatus = 'maybe';
+    }
+    
     const styles = {
       yes: "bg-green-100 text-green-800 border-green-300",
       no: "bg-red-100 text-red-800 border-red-300",
@@ -130,25 +167,39 @@ export default function RSVPPage() {
       maybe: <User className="w-3 h-3" />
     };
 
+    const labels = {
+      yes: "Attending",
+      no: "Not Attending",
+      maybe: "Maybe"
+    };
+
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-semibold border flex items-center gap-1 ${styles[status as keyof typeof styles]}`}>
-        {icons[status as keyof typeof icons]}
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+      <span className={`px-2 py-1 rounded-full text-xs font-semibold border flex items-center gap-1 ${styles[displayStatus]}`}>
+        {icons[displayStatus]}
+        {labels[displayStatus]}
       </span>
     );
   };
 
   const exportToCSV = () => {
-    const headers = ["Event", "Attendee Name", "Email", "Phone", "Status", "Guests", "Special Requests", "RSVP Date"];
+    if (filteredRsvps.length === 0) {
+      toast.error('No RSVPs to export');
+      return;
+    }
+
+    const headers = ["Event", "Event Date", "Host/Creator", "Attendee Name", "Email", "Phone", "Status", "Guests", "Reason for Declining", "Special Requests", "RSVP Date"];
     const csvData = filteredRsvps.map(rsvp => [
-      rsvp.eventTitle,
-      rsvp.attendeeName,
-      rsvp.email,
-      rsvp.phone,
-      rsvp.status,
-      rsvp.guests,
-      rsvp.specialRequests,
-      new Date(rsvp.rsvpDate).toLocaleString()
+      rsvp.event?.title || 'N/A',
+      rsvp.event?.start_at ? new Date(rsvp.event.start_at).toLocaleDateString() : 'N/A',
+      rsvp.event?.host_name || rsvp.event?.creator?.full_name || 'N/A',
+      rsvp.guest_name || rsvp.user?.full_name || 'N/A',
+      rsvp.guest_email || rsvp.user?.email || 'N/A',
+      rsvp.guest_phone || 'N/A',
+      rsvp.response || rsvp.status || 'N/A',
+      rsvp.guests || 0,
+      rsvp.reason_for_declining || 'N/A',
+      rsvp.special_requests || 'N/A',
+      new Date(rsvp.created_at).toLocaleString()
     ]);
 
     const csvContent = [headers, ...csvData]
@@ -159,33 +210,40 @@ export default function RSVPPage() {
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", "rsvp_data.csv");
+    link.setAttribute("download", `admin_rsvp_data_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    toast.success('CSV exported successfully');
   };
 
   const uniqueEvents = rsvps.reduce((acc: { id: number; title: string }[], rsvp) => {
-    if (!acc.some(event => event.id === rsvp.eventId)) {
-      acc.push({ id: rsvp.eventId, title: rsvp.eventTitle });
+    if (rsvp.event && !acc.some(event => event.id === rsvp.event_id)) {
+      acc.push({ id: rsvp.event_id, title: rsvp.event.title });
     }
     return acc;
   }, []);
+
   const stats = {
     total: filteredRsvps.length,
-    attending: filteredRsvps.filter(r => r.status === "yes").length,
-    notAttending: filteredRsvps.filter(r => r.status === "no").length,
-    maybe: filteredRsvps.filter(r => r.status === "maybe").length,
-    totalGuests: filteredRsvps.reduce((sum, r) => sum + r.guests, 0)
+    attending: filteredRsvps.filter(r => r.response === "yes" || r.status === "attending").length,
+    notAttending: filteredRsvps.filter(r => r.response === "no" || r.status === "not_attending").length,
+    maybe: filteredRsvps.filter(r => r.response === "maybe" || r.status === "maybe").length,
+    totalGuests: filteredRsvps.reduce((sum, r) => {
+      if (r.response === "yes" || r.status === "attending") {
+        return sum + (r.guests || 0);
+      }
+      return sum;
+    }, 0)
   };
 
   if (loading) {
     return (
       <div className="p-8 bg-[url('/src/assets/dashboard-bg.png')] bg-cover min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#d4b885] mx-auto"></div>
-          <p className="mt-4 text-[#3b2a13]">Loading RSVPs...</p>
+          <Loader2 className="w-12 h-12 text-[#d4b885] mx-auto mb-4 animate-spin" />
+          <p className="text-lg text-[#3b2a13] font-medium">Loading RSVPs...</p>
         </div>
       </div>
     );
@@ -193,20 +251,31 @@ export default function RSVPPage() {
 
   return (
     <div className="p-8 bg-[url('/src/assets/dashboard-bg.png')] bg-cover min-h-screen">
+      <Toaster position="top-right" />
+      
       {/* Header */}
       <div className="bg-[#d4b885] p-6 rounded-2xl shadow-lg mb-6">
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-3xl font-bold text-[#3b2a13]">RSVP MANAGEMENT</h2>
-            <p className="text-sm text-[#3b2a13]">Manage attendee responses and guest lists</p>
+            <h2 className="text-3xl font-bold text-[#3b2a13]">ADMIN RSVP MANAGEMENT</h2>
+            <p className="text-sm text-[#3b2a13]">View and manage all event RSVPs across the platform</p>
           </div>
-          <button
-            onClick={exportToCSV}
-            className="px-6 py-3 bg-[#3b2a13] text-white rounded-lg font-semibold hover:bg-[#2a1f13] transition-colors flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Export CSV
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleRefresh}
+              className="px-4 py-2 bg-white text-[#3b2a13] rounded-lg font-semibold hover:bg-gray-100 transition-colors flex items-center gap-2 border-2 border-[#3b2a13]"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </button>
+            <button
+              onClick={exportToCSV}
+              className="px-6 py-3 bg-[#3b2a13] text-white rounded-lg font-semibold hover:bg-[#2a1f13] transition-colors flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+          </div>
         </div>
       </div>
 
@@ -247,7 +316,7 @@ export default function RSVPPage() {
               <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by name, email, or event..."
+                placeholder="Search by name, email, event, or host..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#d4b885] focus:border-transparent"
@@ -285,38 +354,64 @@ export default function RSVPPage() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attendee</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Host/Creator</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attendee</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guests</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RSVP Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Special Requests</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredRsvps.map((rsvp) => (
                 <tr key={rsvp.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{rsvp.attendeeName}</div>
-                      <div className="text-sm text-gray-500">{rsvp.email}</div>
-                      <div className="text-sm text-gray-500">{rsvp.phone}</div>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-[#d4b885]" />
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{rsvp.event?.title || 'N/A'}</div>
+                        <div className="text-xs text-gray-500">
+                          {rsvp.event?.start_at ? new Date(rsvp.event.start_at).toLocaleDateString() : 'N/A'}
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{rsvp.eventTitle}</div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {rsvp.event?.host_name || rsvp.event?.creator?.full_name || 'N/A'}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(rsvp.status)}
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {rsvp.guest_name || rsvp.user?.full_name || 'N/A'}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {rsvp.guest_email || rsvp.user?.email || 'N/A'}
+                      </div>
+                      {rsvp.guest_phone && (
+                        <div className="text-sm text-gray-500">{rsvp.guest_phone}</div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {getStatusBadge(rsvp)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {rsvp.guests}
+                    {(rsvp.response === 'yes' || rsvp.status === 'attending') ? (rsvp.guests || 1) : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(rsvp.rsvpDate).toLocaleDateString()}
+                    {new Date(rsvp.created_at).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                    {rsvp.specialRequests || "None"}
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <button
+                      onClick={() => setSelectedRsvp(rsvp)}
+                      className="text-[#d4b885] hover:text-[#c4b184] transition-colors"
+                      title="View Details"
+                    >
+                      <Eye className="w-5 h-5" />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -328,10 +423,133 @@ export default function RSVPPage() {
           <div className="text-center py-12">
             <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No RSVPs found</h3>
-            <p className="text-gray-500">Try adjusting your search or filter criteria</p>
+            <p className="text-gray-500">
+              {searchTerm || statusFilter !== 'all' || eventFilter !== 'all'
+                ? "Try adjusting your search or filter criteria"
+                : "No RSVPs have been submitted yet"}
+            </p>
           </div>
         )}
       </div>
+
+      {/* RSVP Detail Modal */}
+      {selectedRsvp && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedRsvp(null)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {selectedRsvp.guest_name || selectedRsvp.user?.full_name || 'Guest'}
+                  </h2>
+                  <p className="text-gray-600 mt-1">RSVP Details</p>
+                </div>
+                <button
+                  onClick={() => setSelectedRsvp(null)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-900 mb-3">Event Information</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Event:</span>
+                      <span className="font-medium">{selectedRsvp.event?.title || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Date:</span>
+                      <span className="font-medium">
+                        {selectedRsvp.event?.start_at ? new Date(selectedRsvp.event.start_at).toLocaleDateString() : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Location:</span>
+                      <span className="font-medium">{selectedRsvp.event?.location || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Host:</span>
+                      <span className="font-medium">{selectedRsvp.event?.host_name || selectedRsvp.event?.creator?.full_name || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-900 mb-3">Contact Information</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-gray-500" />
+                      <span className="font-medium">{selectedRsvp.guest_email || selectedRsvp.user?.email || 'N/A'}</span>
+                    </div>
+                    {selectedRsvp.guest_phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-gray-500" />
+                        <span className="font-medium">{selectedRsvp.guest_phone}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-900 mb-3">Response Details</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Status:</span>
+                      {getStatusBadge(selectedRsvp)}
+                    </div>
+                    {(selectedRsvp.response === 'yes' || selectedRsvp.status === 'attending') && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Number of Guests:</span>
+                        <span className="font-medium">{selectedRsvp.guests || 1}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">RSVP Date:</span>
+                      <span className="font-medium">{new Date(selectedRsvp.created_at).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedRsvp.response === 'no' && selectedRsvp.reason_for_declining && (
+                  <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <MessageSquare className="w-5 h-5 text-red-600 mt-0.5" />
+                      <div>
+                        <h3 className="font-semibold text-red-900 mb-2">Reason for Declining</h3>
+                        <p className="text-sm text-red-800">{selectedRsvp.reason_for_declining}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {(selectedRsvp.response === 'yes' || selectedRsvp.response === 'maybe') && selectedRsvp.special_requests && (
+                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <MessageSquare className="w-5 h-5 text-blue-600 mt-0.5" />
+                      <div>
+                        <h3 className="font-semibold text-blue-900 mb-2">Special Requests</h3>
+                        <p className="text-sm text-blue-800">{selectedRsvp.special_requests}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setSelectedRsvp(null)}
+                  className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
