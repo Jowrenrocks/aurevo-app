@@ -63,4 +63,19 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Account Deletion (optional)
     Route::delete('/user/account', [ProfileController::class, 'deleteAccount']);
+
+    // Get all notifications for current user
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    
+    // Get notification statistics
+    Route::get('/notifications/stats', [NotificationController::class, 'stats']);
+    
+    // Create and send a new notification
+    Route::post('/notifications', [NotificationController::class, 'store']);
+    
+    // Send reminder to all attendees
+    Route::post('/notifications/send-reminder', [NotificationController::class, 'sendReminder']);
+    
+    // Delete a notification
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
 });
