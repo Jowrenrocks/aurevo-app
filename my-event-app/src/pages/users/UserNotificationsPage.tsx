@@ -1,23 +1,31 @@
 import { useState, useEffect } from "react";
-import { Bell, Mail, MessageSquare, Smartphone, Send, Plus, CheckCircle, Clock, FileText, Eye } from "lucide-react";
+import { Bell, Mail, MessageSquare, Smartphone, Send, Plus, CheckCircle, Clock, FileText, Eye, Trash2, RefreshCw, Loader2 } from "lucide-react";
 import api from '../../utils/api';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface Notification {
   id: number;
   type: "email" | "sms" | "push";
   title: string;
   message: string;
-  status: "sent" | "scheduled" | "draft";
+  status: "sent" | "scheduled" | "draft" | "failed";
   recipientCount: number;
   eventTitle: string;
   scheduledDate?: string;
   sentDate?: string;
+  created_at: string;
+}
+
+interface Event {
+  id: number;
+  title: string;
 }
 
 export default function UserNotificationsPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [showComposeModal, setShowComposeModal] = useState(false);
   const [composeForm, setComposeForm] = useState({
@@ -29,65 +37,15 @@ export default function UserNotificationsPage() {
     recipientEmails: ""
   });
   const [sending, setSending] = useState(false);
+  const [stats, setStats] = useState({
+    total: 0,
+    sent: 0,
+    scheduled: 0,
+    draft: 0
+  });
 
   useEffect(() => {
-    // Mock data - replace with API calls
-    const mockNotifications: Notification[] = [
-      {
-        id: 1,
-        type: "email",
-        title: "Event Reminder: Corporate Gala 2025",
-        message: "Don't forget about the upcoming Corporate Gala 2025. We look forward to seeing you there!",
-        status: "sent",
-        recipientCount: 150,
-        eventTitle: "Corporate Gala 2025",
-        sentDate: "2025-11-20T10:00:00Z"
-      },
-      {
-        id: 2,
-        type: "sms",
-        title: "RSVP Confirmation",
-        message: "Your RSVP for Wedding - Smith & Jones has been confirmed. See you there!",
-        status: "sent",
-        recipientCount: 1,
-        eventTitle: "Wedding - Smith & Jones",
-        sentDate: "2025-11-19T14:30:00Z"
-      },
-      {
-        id: 3,
-        type: "push",
-        title: "Event Update: Birthday Celebration",
-        message: "Venue change: The birthday celebration will now be held at Grand Ballroom.",
-        status: "scheduled",
-        recipientCount: 75,
-        eventTitle: "Birthday Celebration",
-        scheduledDate: "2025-11-25T09:00:00Z"
-      },
-      {
-        id: 4,
-        type: "email",
-        title: "Thank You Message",
-        message: "Thank you for attending our recent conference. We hope to see you again!",
-        status: "draft",
-        recipientCount: 200,
-        eventTitle: "Tech Conference 2025",
-        sentDate: undefined
-      },
-      {
-        id: 5,
-        type: "sms",
-        title: "Last Call Reminder",
-        message: "Final reminder: Corporate Gala 2025 starts in 2 hours. Don't be late!",
-        status: "scheduled",
-        recipientCount: 120,
-        eventTitle: "Corporate Gala 2025",
-        scheduledDate: "2025-12-15T17:00:00Z"
-      }
-    ];
-
-    setNotifications(mockNotifications);
-    setFilteredNotifications(mockNotifications);
-    setLoading(false);
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -97,6 +55,42 @@ export default function UserNotificationsPage() {
       setFilteredNotifications(notifications.filter(n => n.status === activeTab));
     }
   }, [notifications, activeTab]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load notifications
+      const notificationsResponse = await api.get('/notifications');
+      setNotifications(notificationsResponse.data);
+      setFilteredNotifications(notificationsResponse.data);
+      
+      // Load stats
+      const statsResponse = await api.get('/notifications/stats');
+      setStats(statsResponse.data);
+      
+      // Load user's events for compose modal
+      const eventsResponse = await api.get('/events');
+      setEvents(eventsResponse.data);
+      
+    } catch (error: any) {
+      console.error('Error loading notifications:', error);
+      toast.error('Failed to load notifications');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    toast.promise(
+      loadData(),
+      {
+        loading: 'Refreshing...',
+        success: 'Notifications refreshed',
+        error: 'Failed to refresh'
+      }
+    );
+  };
 
   const getTypeIcon = (type: string) => {
     const icons = {
@@ -111,13 +105,15 @@ export default function UserNotificationsPage() {
     const styles = {
       sent: "bg-green-100 text-green-800 border-green-300",
       scheduled: "bg-blue-100 text-blue-800 border-blue-300",
-      draft: "bg-gray-100 text-gray-800 border-gray-300"
+      draft: "bg-gray-100 text-gray-800 border-gray-300",
+      failed: "bg-red-100 text-red-800 border-red-300"
     };
 
     const icons = {
       sent: <CheckCircle className="w-3 h-3" />,
       scheduled: <Clock className="w-3 h-3" />,
-      draft: <FileText className="w-3 h-3" />
+      draft: <FileText className="w-3 h-3" />,
+      failed: <Eye className="w-3 h-3" />
     };
 
     return (
@@ -129,15 +125,20 @@ export default function UserNotificationsPage() {
   };
 
   const handleSendReminder = async () => {
+    const confirmed = window.confirm('Send a reminder to all your event attendees?');
+    if (!confirmed) return;
+
     try {
-      await api.post('/notifications/send-reminder', {
+      const response = await api.post('/notifications/send-reminder', {
         message: "Reminder: Don't forget about your upcoming event!",
         type: "email"
       });
-      alert("Reminder sent to all attendees!");
-    } catch (error) {
+      
+      toast.success(response.data.message);
+      loadData(); // Reload notifications
+    } catch (error: any) {
       console.error('Error sending reminder:', error);
-      alert("Failed to send reminder. Please try again.");
+      toast.error(error.response?.data?.message || 'Failed to send reminder');
     }
   };
 
@@ -155,21 +156,9 @@ export default function UserNotificationsPage() {
         recipientEmails: composeForm.sendToAll ? null : composeForm.recipientEmails.split(',').map(email => email.trim())
       };
 
-      await api.post('/notifications', notificationData);
+      const response = await api.post('/notifications', notificationData);
 
-      // Add to notifications list
-      const newNotification: Notification = {
-        id: Date.now(), // Temporary ID
-        type: composeForm.type,
-        title: composeForm.title,
-        message: composeForm.message,
-        status: "sent",
-        recipientCount: composeForm.sendToAll ? 150 : (composeForm.recipientEmails.split(',').length || 1),
-        eventTitle: "Custom Notification",
-        sentDate: new Date().toISOString()
-      };
-
-      setNotifications(prev => [newNotification, ...prev]);
+      toast.success(response.data.message);
       setShowComposeModal(false);
       setComposeForm({
         type: "email",
@@ -180,28 +169,35 @@ export default function UserNotificationsPage() {
         recipientEmails: ""
       });
 
-      alert("Notification sent successfully!");
-    } catch (error) {
+      loadData(); // Reload notifications
+    } catch (error: any) {
       console.error('Error sending notification:', error);
-      alert("Failed to send notification. Please try again.");
+      toast.error(error.response?.data?.message || 'Failed to send notification');
     } finally {
       setSending(false);
     }
   };
 
-  const stats = {
-    total: notifications.length,
-    sent: notifications.filter(n => n.status === "sent").length,
-    scheduled: notifications.filter(n => n.status === "scheduled").length,
-    drafts: notifications.filter(n => n.status === "draft").length
+  const handleDeleteNotification = async (id: number) => {
+    const confirmed = window.confirm('Are you sure you want to delete this notification?');
+    if (!confirmed) return;
+
+    try {
+      await api.delete(`/notifications/${id}`);
+      toast.success('Notification deleted successfully');
+      loadData(); // Reload notifications
+    } catch (error: any) {
+      console.error('Error deleting notification:', error);
+      toast.error('Failed to delete notification');
+    }
   };
 
   if (loading) {
     return (
       <div className="p-8 bg-[url('/src/assets/dashboard-bg.png')] bg-cover min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#d4b885] mx-auto"></div>
-          <p className="mt-4 text-[#3b2a13]">Loading notifications...</p>
+          <Loader2 className="w-12 h-12 text-[#d4b885] mx-auto mb-4 animate-spin" />
+          <p className="text-lg text-[#3b2a13] font-medium">Loading notifications...</p>
         </div>
       </div>
     );
@@ -209,6 +205,8 @@ export default function UserNotificationsPage() {
 
   return (
     <div className="p-8 bg-[url('/src/assets/dashboard-bg.png')] bg-cover min-h-screen">
+      <Toaster position="top-right" />
+      
       {/* Header */}
       <div className="bg-[#d4b885] p-6 rounded-2xl shadow-lg mb-6">
         <div className="flex justify-between items-center">
@@ -217,6 +215,13 @@ export default function UserNotificationsPage() {
             <p className="text-sm text-[#3b2a13]">Send reminders and announcements to your attendees</p>
           </div>
           <div className="flex gap-3">
+            <button
+              onClick={handleRefresh}
+              className="px-4 py-2 bg-white text-[#3b2a13] rounded-lg font-semibold hover:bg-gray-100 transition-colors flex items-center gap-2 border-2 border-[#3b2a13]"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </button>
             <button
               onClick={handleSendReminder}
               className="px-6 py-3 bg-[#3b2a13] text-white rounded-lg font-semibold hover:bg-[#2a1f13] transition-colors flex items-center gap-2"
@@ -254,14 +259,14 @@ export default function UserNotificationsPage() {
         </div>
         <div className="bg-gray-50 p-4 rounded-xl shadow-md text-center border border-gray-200">
           <FileText className="w-6 h-6 mx-auto mb-2 text-gray-600" />
-          <p className="text-2xl font-bold text-gray-600">{stats.drafts}</p>
+          <p className="text-2xl font-bold text-gray-600">{stats.draft}</p>
           <p className="text-xs text-gray-600">Drafts</p>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-        <div className="flex gap-4 border-b border-gray-200">
+        <div className="flex gap-4 border-b border-gray-200 flex-wrap">
           {[
             { key: "all", label: "All Notifications" },
             { key: "sent", label: "Sent" },
@@ -327,12 +332,16 @@ export default function UserNotificationsPage() {
                       ? new Date(notification.sentDate).toLocaleDateString()
                       : notification.scheduledDate
                       ? new Date(notification.scheduledDate).toLocaleDateString()
-                      : "Not set"
+                      : new Date(notification.created_at).toLocaleDateString()
                     }
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button className="text-[#d4b885] hover:text-[#b8946a] transition-colors">
-                      <Eye className="w-4 h-4" />
+                    <button
+                      onClick={() => handleDeleteNotification(notification.id)}
+                      className="text-red-600 hover:text-red-800 transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </td>
                 </tr>
@@ -394,6 +403,26 @@ export default function UserNotificationsPage() {
                   </div>
                 </div>
 
+                {/* Event Selection */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Select Event (Optional)
+                  </label>
+                  <select
+                    value={composeForm.eventId}
+                    onChange={(e) => setComposeForm(prev => ({ ...prev, eventId: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#d4b885] focus:border-transparent"
+                  >
+                    <option value="">All Events</option>
+                    {events.map(event => (
+                      <option key={event.id} value={event.id}>{event.title}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Leave blank to send to attendees from all your events
+                  </p>
+                </div>
+
                 {/* Title */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -440,7 +469,7 @@ export default function UserNotificationsPage() {
                         className="w-4 h-4 text-[#d4b885] focus:ring-[#d4b885]"
                       />
                       <label htmlFor="sendToAll" className="text-sm text-gray-700">
-                        Send to all attendees
+                        Send to all attending guests
                       </label>
                     </div>
                     <div className="flex items-center gap-3">
@@ -484,7 +513,7 @@ export default function UserNotificationsPage() {
                   >
                     {sending ? (
                       <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#3b2a13]"></div>
+                        <Loader2 className="w-4 h-4 animate-spin" />
                         Sending...
                       </>
                     ) : (

@@ -78,4 +78,33 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Delete a notification
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+
+     // Get system notifications (platform activity)
+    Route::get('/system-notifications', [AdminNotificationController::class, 'getSystemNotifications']);
+    
+    // Get all user-sent notifications
+    Route::get('/all-notifications', [AdminNotificationController::class, 'getAllUserNotifications']);
+    
+    // Mark notification as read
+    Route::post('/system-notifications/{id}/read', [AdminNotificationController::class, 'markAsRead']);
+    
+    // Get notification statistics
+    Route::get('/notification-stats', [AdminNotificationController::class, 'getNotificationStats']);
+    
+    
+    // ADMIN REPORTS & ANALYTICS
+    // Get comprehensive statistics
+    Route::get('/stats', [AdminStatsController::class, 'getStats']);
+    
+    // Get detailed event report
+    Route::get('/reports/events', [AdminStatsController::class, 'getEventReport']);
+    
+    // Get attendance report
+    Route::get('/reports/attendance', [AdminStatsController::class, 'getAttendanceReport']);
+    
+    // Get user activity report
+    Route::get('/reports/users', [AdminStatsController::class, 'getUserActivityReport']);
+    
+    // Export report as CSV
+    Route::get('/reports/export', [AdminStatsController::class, 'exportReport']);
 });
