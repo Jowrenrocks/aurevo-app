@@ -22,7 +22,6 @@ import ViewEventsPage from "./pages/users/ViewEventsPage";
 import ProfilePage from "./pages/users/ProfilePage";
 import UserRSVPPage from "./pages/users/UserRSVPPage";
 import EditEventPage from "./pages/users/EditEventPage";
-import UserNotificationsPage from "./pages/users/UserNotificationsPage";
 import HelpPage from "./pages/users/HelpPage";
 
 // Admin pages + layout
@@ -32,7 +31,6 @@ import AdminViewEventsPage from "./pages/admin/ViewEventsPage";
 import AdminCreateEventPage from "./pages/admin/CreateEventPage";
 import AdminEditEventPage from "./pages/admin/EditEventPage";
 import AdminRSVPPage from "./pages/admin/RSVPPage";
-import NotificationsPage from "./pages/admin/NotificationsPage";
 import ReportsPage from "./pages/admin/ReportsPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 
@@ -93,12 +91,11 @@ function App() {
             <Route path="/user/view-events" element={<ViewEventsPage />} />
             <Route path="/user/edit-event/:eventId" element={<EditEventPage />} />
             <Route path="/user/rsvps" element={<UserRSVPPage />} />
-            <Route path="/user/notifications" element={<UserNotificationsPage />} />
             <Route path="/user/profile" element={<ProfilePage />} />
             <Route path="/user/help" element={<HelpPage />} />
           </Route>
 
-          {/* Admin Routes - Updated with new pages */}
+          {/* Admin Routes */}
           <Route
             element={
               <ProtectedRoute requiredRole="admin">
@@ -111,7 +108,6 @@ function App() {
             <Route path="/admin/create-event" element={<AdminCreateEventPage />} />
             <Route path="/admin/edit-event/:eventId" element={<AdminEditEventPage />} />
             <Route path="/admin/rsvps" element={<AdminRSVPPage />} />
-            <Route path="/admin/notifications" element={<NotificationsPage />} />
             <Route path="/admin/reports" element={<ReportsPage />} />
             <Route path="/admin/settings" element={<SettingsPage />} />
           </Route>

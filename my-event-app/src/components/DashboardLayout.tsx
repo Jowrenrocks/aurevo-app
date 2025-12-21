@@ -8,7 +8,6 @@ import {
   LogOut,
   Menu,
   HelpCircle,
-  Bell,
   ChevronDown
 } from "lucide-react";
 
@@ -40,7 +39,6 @@ export default function DashboardLayout({ setIsLoggedIn }: DashboardLayoutProps)
         { name: "RSVPs / Attendees", path: "/user/rsvps" },
       ]
     },
-    { name: "Notifications", path: "/user/notifications", icon: <Bell size={20} /> },
     { name: "Profile", path: "/user/profile", icon: <User size={20} /> },
     { name: "Help / Contact", path: "/user/help", icon: <HelpCircle size={20} /> },
   ];

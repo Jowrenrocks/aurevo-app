@@ -6,8 +6,6 @@ import {
   LogOut,
   Menu,
   User,
-  Bell,
-  Plus,
   Users,
   BarChart,
   Settings,
@@ -43,7 +41,6 @@ export default function AdminLayout({ setIsLoggedIn }: AdminLayoutProps) {
       ]
     },
     { name: "RSVPs / Attendees", path: "/admin/rsvps", icon: <Users size={20} /> },
-    { name: "Notifications", path: "/admin/notifications", icon: <Bell size={20} /> },
     { name: "Reports", path: "/admin/reports", icon: <BarChart size={20} /> },
     { name: "Account Settings", path: "/admin/settings", icon: <Settings size={20} /> },
   ];
@@ -175,7 +172,6 @@ export default function AdminLayout({ setIsLoggedIn }: AdminLayoutProps) {
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <Bell className="w-6 h-6" />
             <div className="flex items-center gap-2">
               <User className="w-6 h-6" />
               <span className="font-semibold">ADMIN</span>
