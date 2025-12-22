@@ -78,7 +78,7 @@ export default function HelpPage() {
           <h3 className="font-bold text-lg mb-2">Email Support</h3>
           <p className="text-blue-100 text-sm mb-3">Get help via email</p>
           <a href="mailto:support@eventmanagement.com" className="text-sm underline">
-            support@eventmanagement.com
+            jowrenrocks123@gmail.com
           </a>
         </div>
 
@@ -87,7 +87,7 @@ export default function HelpPage() {
           <h3 className="font-bold text-lg mb-2">Phone Support</h3>
           <p className="text-green-100 text-sm mb-3">Mon-Fri, 9AM-5PM</p>
           <a href="tel:+639123456789" className="text-sm underline">
-            +63 912 345 6789
+            +63 912 155 2279
           </a>
         </div>
 
