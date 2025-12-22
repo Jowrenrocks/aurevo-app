@@ -487,6 +487,8 @@ export default function EventCreationWizard() {
   const handleNext = () => {
     if (validateStep()) {
       setCurrentStep(prev => Math.min(prev + 1, 4));
+    } else {
+      toast.error('Please fill in all required fields');
     }
   };
 
@@ -497,14 +499,16 @@ export default function EventCreationWizard() {
   const handleSubmit = async () => {
     if (validateStep()) {
       try {
-        // Transform form data to match API expectations (only fields that exist in database)
+        // Transform form data to match API expectations
         const eventData = {
           title: formData.eventName,
           description: formData.notes || `${formData.eventType} event - Host: ${formData.hostName} (${formData.contactNumber}) - Expected guests: ${formData.expectedGuests}`,
           start_at: `${formData.eventDate}T${formData.startTime}:00`,
           end_at: formData.endTime ? `${formData.eventDate}T${formData.endTime}:00` : null,
           location: formData.venue?.name || null,
-          status: 'approved',
+          host_name: formData.hostName,
+          host_contact: formData.contactNumber,
+          status: 'pending',
         };
 
         console.log('Submitting event data:', eventData);
@@ -513,15 +517,16 @@ export default function EventCreationWizard() {
         await api.post('/events', eventData);
 
         setSubmitted(true);
+        toast.success('Event created successfully!');
 
         // Redirect to view events page after success
         setTimeout(() => {
           navigate('/user/view-events');
         }, 2000);
 
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error creating event:', error);
-        toast.error('Failed to create event. Please try again.');
+        toast.error(error.response?.data?.message || 'Failed to create event. Please try again.');
       }
     }
   };
@@ -535,7 +540,7 @@ export default function EventCreationWizard() {
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Event Created Successfully!</h2>
           <p className="text-gray-600 mb-4">
-            Your event has been created. View at your View Events to clarify.
+            Your event has been created. View it in your View Events to clarify.
           </p>
           <div className="inline-block px-6 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
             Redirecting...
@@ -549,6 +554,7 @@ export default function EventCreationWizard() {
     <div 
     className="min-h-screen bg-cover bg-center p-6"
     style={{ backgroundImage: `url(${dashboardBg})` }}>
+      <Toaster position="top-right" />
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Create Your Event</h1>
