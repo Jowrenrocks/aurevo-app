@@ -169,11 +169,17 @@ function Step1BasicInfo({ formData, updateFormData }: StepProps) {
           <input
             type="tel"
             value={formData.contactNumber}
-            onChange={(e) => updateFormData('contactNumber', e.target.value)}
+            onChange={(e) => {
+              // Only allow numbers and common phone characters
+              const value = e.target.value.replace(/[^\d+\-\s()]/g, '');
+              updateFormData('contactNumber', value);
+            }}
             placeholder="+63 XXX XXX XXXX"
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            inputMode="tel"
             required
           />
+          <p className="text-xs text-gray-500 mt-1">Numbers and common phone characters only</p>
         </div>
       </div>
     </div>
@@ -233,17 +239,32 @@ function Step2Details({ formData, updateFormData }: StepProps) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Expected Guests *
+            Expected Guests * {formData.venue && `(Max: ${formData.venue.capacity})`}
           </label>
           <input
             type="number"
             value={formData.expectedGuests}
-            onChange={(e) => updateFormData('expectedGuests', e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              const maxGuests = formData.venue?.capacity || 0;
+              
+              if (maxGuests > 0 && parseInt(value) > maxGuests) {
+                toast.error(`Maximum guests for ${formData.venue?.name} is ${maxGuests}`);
+                return;
+              }
+              updateFormData('expectedGuests', value);
+            }}
             placeholder="Number of guests"
             min="1"
+            max={formData.venue?.capacity || undefined}
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
             required
           />
+          {formData.venue && formData.venue.capacity > 0 && (
+            <p className="text-xs text-gray-500 mt-1">
+              Venue capacity: {formData.venue.capacity} guests
+            </p>
+          )}
         </div>
       </div>
 
